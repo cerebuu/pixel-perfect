@@ -291,6 +291,7 @@ describe("GAW V2 Feature & Functionality Suite", () => {
     it("enforces valid booking state transitions and prevents completing unstarted jobs", () => {
       expect(MY_JOBS_TABS.map((t) => t.key)).toEqual([
         "applications",
+        "saved",
         "pending",
         "upcoming",
         "in_progress",

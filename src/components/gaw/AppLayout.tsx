@@ -4,16 +4,23 @@ import {
   ArrowLeft,
   Briefcase,
   CalendarCheck,
+  CheckCircle2,
   ClipboardList,
   Crown,
   Home,
   LogOut,
+  Monitor,
+  Moon,
   RotateCcw,
   Search,
+  Settings,
+  ShieldCheck,
+  Sun,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Logo, Avatar } from "./primitives";
+import { GAWBrand } from "./GAWBrand";
+import { Avatar, HeaderBrand } from "./primitives";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,7 +31,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useGaw, type Mode } from "@/lib/gaw/store";
+import { identityVerified, useGaw, type Mode } from "@/lib/gaw/store";
+import { useTheme, type ThemePref } from "@/lib/gaw/theme";
 
 type NavItem = { to: "/hire" | "/find" | "/bookings" | "/pro" | "/work" | "/jobs" | "/my-jobs"; label: string; icon: LucideIcon };
 
@@ -87,8 +95,53 @@ export function ModeSwitcher({ className }: { className?: string }) {
   );
 }
 
-function AccountMenu() {
-  const { account, logOut, resetDemo, plans } = useGaw();
+export function ThemeSegmentedControl({ compact = false }: { compact?: boolean }) {
+  const { pref, setPref } = useTheme();
+  const options: { key: ThemePref; label: string; icon: LucideIcon }[] = [
+    { key: "light", label: "Light", icon: Sun },
+    { key: "dark", label: "Dark", icon: Moon },
+    { key: "system", label: "System", icon: Monitor },
+  ];
+  return (
+    <div
+      role="group"
+      aria-label="Theme preference"
+      className={cn(
+        "inline-flex items-center rounded-full border bg-card p-1 text-xs font-semibold shadow-soft",
+        compact && "p-0.5",
+      )}
+    >
+      {options.map((opt) => {
+        const Icon = opt.icon;
+        const active = pref === opt.key;
+        return (
+          <button
+            key={opt.key}
+            type="button"
+            aria-pressed={active}
+            aria-label={`${opt.label} theme`}
+            title={`${opt.label} theme`}
+            onClick={() => setPref(opt.key)}
+            className={cn(
+              "inline-flex cursor-pointer items-center gap-1 rounded-full transition-colors",
+              compact ? "h-8 px-2" : "h-8 px-3",
+              active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-3.5" aria-hidden />
+            {!compact && <span>{opt.label}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export const ThemeToggle = ThemeSegmentedControl;
+
+export function AccountMenu() {
+  const { account, logOut, resetDemo, plans, verification } = useGaw();
+  const { pref, setPref } = useTheme();
   const navigate = useNavigate();
   if (!account) return null;
   const initials = account.name
@@ -97,20 +150,76 @@ function AccountMenu() {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+  const verified = identityVerified(verification);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="cursor-pointer rounded-2xl" aria-label="Account menu">
+        <button type="button" className="relative cursor-pointer rounded-2xl" aria-label="Account menu">
           <Avatar initials={initials} size="sm" />
+          {verified && (
+            <span
+              title="Identity Verified"
+              className="absolute -bottom-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-primary text-primary-foreground ring-2 ring-background"
+            >
+              <CheckCircle2 className="size-3" aria-hidden />
+            </span>
+          )}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>
-          <p className="font-bold">{account.name}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-bold">{account.name}</p>
+            {verified && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                <CheckCircle2 className="size-3" aria-hidden /> Verified
+              </span>
+            )}
+          </div>
           <p className="text-xs font-normal text-muted-foreground">{account.email}</p>
-          {account.isDemo && <p className="mt-1 text-xs font-semibold text-gold-foreground">Demo judge account</p>}
+          {account.isDemo && <p className="mt-1 text-xs font-semibold text-gold-foreground dark:text-gold">Demo judge account</p>}
           {plans.length > 0 && <p className="mt-1 text-xs font-semibold text-primary">GAW Pro (demo) active</p>}
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+
+        <div className="px-2 py-1.5">
+          <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Appearance</p>
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+            {(
+              [
+                ["light", "Light", Sun],
+                ["dark", "Dark", Moon],
+                ["system", "System", Monitor],
+              ] as const
+            ).map(([k, l, Icon]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={pref === k}
+                onClick={() => setPref(k)}
+                className={cn(
+                  "inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg text-xs font-semibold transition-colors",
+                  pref === k ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="size-3.5" aria-hidden />
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => navigate({ to: "/verify" })}>
+          <ShieldCheck /> Verification Center
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate({ to: "/settings" })}>
+          <Settings /> Account Settings
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigate({ to: "/pro" })}>
+          <Crown /> GAW Pro Subscription
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={() => {
@@ -140,7 +249,7 @@ export function AppLayout({
   back,
   children,
 }: {
-  /** Which side of GAW this page belongs to; omit for shared pages (e.g. Pro). */
+  /** Which side of GAW this page belongs to; omit for shared pages (e.g. Pro, Settings, Verify). */
   mode?: Mode;
   title?: string;
   back?: ReactNode;
@@ -160,8 +269,11 @@ export function AppLayout({
 
   if (!ready) {
     return (
-      <div className="grid min-h-screen place-items-center" aria-busy="true">
-        <div className="size-8 animate-spin rounded-full border-4 border-secondary border-t-primary" />
+      <div className="grid min-h-screen place-items-center bg-background" aria-busy="true">
+        <div className="flex flex-col items-center gap-3">
+          <GAWBrand variant="icon" size="lg" className="animate-pulse" />
+          <span className="text-xs font-semibold tracking-wide text-muted-foreground">Loading GAW…</span>
+        </div>
       </div>
     );
   }
@@ -169,11 +281,11 @@ export function AppLayout({
   return (
     <div className="min-h-screen pb-24 md:pb-10">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 md:px-6">
-          <Link to={navMode === "hire" ? "/hire" : "/work"} aria-label="GAW home">
-            <Logo />
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 md:gap-4 md:px-6">
+          <Link to={navMode === "hire" ? "/hire" : "/work"} aria-label="GAW — Grab a Work home" className="shrink-0">
+            <HeaderBrand size="sm" proBadge={gaw.plans.length > 0} />
           </Link>
-          <nav aria-label="Main" className="ml-6 hidden items-center gap-1 md:flex">
+          <nav aria-label="Main" className="ml-4 hidden items-center gap-1 md:flex">
             {items.map((it) => (
               <Link
                 key={it.to}
@@ -181,7 +293,7 @@ export function AppLayout({
                 className={cn(
                   "inline-flex h-10 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition-colors",
                   isActive(it.to) ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground",
-                  it.to === "/pro" && !isActive(it.to) && "text-gold-foreground",
+                  it.to === "/pro" && !isActive(it.to) && "text-gold-foreground dark:text-gold",
                 )}
               >
                 <it.icon className="size-4" aria-hidden />
@@ -189,7 +301,10 @@ export function AppLayout({
               </Link>
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex items-center gap-2">
+            <div className="hidden sm:block">
+              <ThemeSegmentedControl compact />
+            </div>
             <ModeSwitcher />
             <AccountMenu />
           </div>
@@ -221,7 +336,7 @@ export function AppLayout({
                   className={cn(
                     "flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-semibold transition-colors",
                     active ? "text-primary" : "text-muted-foreground",
-                    it.to === "/pro" && !active && "text-gold-foreground",
+                    it.to === "/pro" && !active && "text-gold-foreground dark:text-gold",
                   )}
                 >
                   <span className={cn("grid h-7 w-12 place-items-center rounded-full", active && "bg-secondary")}>
@@ -238,7 +353,13 @@ export function AppLayout({
   );
 }
 
-export function BackButton({ to, label = "Back" }: { to: "/hire" | "/find" | "/work" | "/jobs" | "/bookings"; label?: string }) {
+export function BackButton({
+  to,
+  label = "Back",
+}: {
+  to: "/hire" | "/find" | "/work" | "/jobs" | "/bookings" | "/my-jobs" | "/verify" | "/settings" | "/pro";
+  label?: string;
+}) {
   return (
     <Button asChild variant="outline" size="icon" className="shrink-0 rounded-full">
       <Link to={to} aria-label={label}>

@@ -1,7 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { BARANGAYS, DEMO_PERSONAS, JOBS, nearestBarangay, WORKERS } from "./data";
 import { applyAction, canWithdraw, type ApplicationStatus, type BookingAction, type BookingStatus } from "./bookings";
-import type { CredentialKey, VerifStatus } from "./verification";
+import {
+  DEFAULT_REJECTION_REASON,
+  DEFAULT_RESUBMISSION_REASON,
+  evaluateVerificationGuard,
+  type CredentialKey,
+  type VerifStatus,
+} from "./verification";
 import type { LatLng } from "./geo";
 
 export type { BookingStatus } from "./bookings";
@@ -78,6 +84,7 @@ export interface VerifDoc {
   fileType: string;
   isSample: boolean;
   status: VerifStatus;
+  reason?: string | undefined;
   submittedAt: number;
 }
 
@@ -200,12 +207,12 @@ interface GawContext extends GawState {
   setAvailable: (v: boolean) => void;
   addBooking: (b: Omit<Booking, "id" | "status" | "createdAt" | "side" | "client">) => string;
   bookingAction: (id: string, a: BookingAction) => void;
-  applyToJob: (a: Pick<Application, "jobId" | "message" | "rate">) => void;
+  applyToJob: (a: Pick<Application, "jobId" | "message" | "rate">) => boolean;
   withdrawApplication: (id: string) => void;
   simulateHire: (applicationId: string) => string | null;
   setPlan: (p: ProPlan, on: boolean) => void;
   submitVerification: (target: "identity" | CredentialKey, doc: Omit<VerifDoc, "status" | "submittedAt">) => void;
-  setVerificationStatus: (target: "identity" | CredentialKey, s: VerifStatus) => void;
+  setVerificationStatus: (target: "identity" | CredentialKey, s: VerifStatus, reason?: string) => void;
   removeVerification: (target: "identity" | CredentialKey) => void;
   resetDemo: () => void;
 }
@@ -255,21 +262,27 @@ export function GawProvider({ children }: { children: ReactNode }) {
       saveWorkerProfile: (workerProfile) => patch((s) => ({ ...s, workerProfile })),
       setAvailable: (available) => patch((s) => ({ ...s, available })),
       addBooking: (b) => {
+        if (!identityVerified(state.verification)) return "";
         const id = uid("b");
         patch((s) => {
+          if (!identityVerified(s.verification)) return s;
           const me = s.account ? { name: s.account.name, initials: initialsOf(s.account.name) } : { name: "You", initials: "ME" };
           return { ...s, bookings: [{ ...b, id, side: "hiring", client: me, status: "pending", createdAt: Date.now() }, ...s.bookings] };
         });
         return id;
       },
       bookingAction: (id, a) => patch((s) => ({ ...s, bookings: applyAction(s.bookings, id, a) })),
-      applyToJob: (a) =>
+      applyToJob: (a) => {
+        if (!identityVerified(state.verification)) return false;
         patch((s) => {
+          if (!identityVerified(s.verification)) return s;
           const existing = s.applications.find((x) => x.jobId === a.jobId);
           if (existing && existing.status !== "withdrawn") return s;
           const rest = s.applications.filter((x) => x.jobId !== a.jobId);
           return { ...s, applications: [{ ...a, id: uid("a"), status: "submitted", createdAt: Date.now() }, ...rest] };
-        }),
+        });
+        return true;
+      },
       withdrawApplication: (id) =>
         patch((s) => ({
           ...s,
@@ -310,16 +323,22 @@ export function GawProvider({ children }: { children: ReactNode }) {
         patch((s) => ({ ...s, plans: on ? Array.from(new Set([...s.plans, p])) : s.plans.filter((x) => x !== p) })),
       submitVerification: (target, doc) =>
         patch((s) => {
-          const full: VerifDoc = { ...doc, status: "pending", submittedAt: Date.now() };
+          const full: VerifDoc = { ...doc, status: "pending", reason: undefined, submittedAt: Date.now() };
           return target === "identity"
             ? { ...s, verification: { ...s.verification, identity: full } }
             : { ...s, verification: { ...s.verification, credentials: { ...s.verification.credentials, [target]: full } } };
         }),
-      setVerificationStatus: (target, st) =>
+      setVerificationStatus: (target, st, customReason) =>
         patch((s) => {
           const cur = target === "identity" ? s.verification.identity : s.verification.credentials[target];
           if (!cur || cur.status !== "pending") return s;
-          const next = { ...cur, status: st };
+          const resolvedReason =
+            st === "rejected"
+              ? (customReason ?? DEFAULT_REJECTION_REASON)
+              : st === "resubmission_required"
+                ? (customReason ?? DEFAULT_RESUBMISSION_REASON)
+                : undefined;
+          const next: VerifDoc = { ...cur, status: st, reason: resolvedReason };
           return target === "identity"
             ? { ...s, verification: { ...s.verification, identity: next } }
             : { ...s, verification: { ...s.verification, credentials: { ...s.verification.credentials, [target]: next } } };
@@ -357,5 +376,9 @@ export function workerById(id: string) {
 }
 
 export function identityVerified(v: Verification) {
-  return v.identity?.status === "verified";
+  return evaluateVerificationGuard(v.identity).allowed;
+}
+
+export function canPerformProtectedAction(v: Verification) {
+  return evaluateVerificationGuard(v.identity);
 }

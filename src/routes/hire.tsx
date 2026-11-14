@@ -1,15 +1,39 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, CalendarCheck, Crown, MapPin, Search } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarCheck,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Crown,
+  MapPin,
+  Navigation,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { WorkerCard } from "@/components/gaw/cards";
 import { iconFor } from "@/components/gaw/categoryIcons";
+import { LocationPicker } from "@/components/gaw/GawMap";
 import { Avatar, LocationFilter, SectionHeader, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { barangayName, FEATURED_CATEGORIES as CATEGORIES, WORKERS } from "@/lib/gaw/data";
+import {
+  CATEGORIES,
+  FEATURED_CATEGORIES,
+  OTHER_CATEGORY,
+  WORKERS,
+} from "@/lib/gaw/data";
 import { filterWorkers } from "@/lib/gaw/filter";
-import { bookingsFor, hiringOrigin, useGaw } from "@/lib/gaw/store";
+import { normalizeService, validateCustomService } from "@/lib/gaw/services";
+import {
+  hiringOrigin,
+  hiringOriginLabel,
+  identityVerified,
+  useGaw,
+} from "@/lib/gaw/store";
+import { VERIF_LABEL } from "@/lib/gaw/verification";
 
 export const Route = createFileRoute("/hire")({
   head: () => ({
@@ -38,45 +62,100 @@ function EmployerDashboard() {
 
 function DashboardBody() {
   const gaw = useGaw();
-  const { account, locationId, setLocation, plans } = gaw;
-  const bookings = bookingsFor(gaw.bookings, "hiring");
+  const {
+    account,
+    locationId,
+    setLocation,
+    serviceLocation,
+    setServiceLocation,
+    bookings,
+    plans,
+    verification,
+  } = gaw;
+
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [showAllCats, setShowAllCats] = useState(false);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customService, setCustomService] = useState("");
+  const [customErr, setCustomErr] = useState<string | null>(null);
+  const [showMapPicker, setShowMapPicker] = useState(false);
+
+  const origin = hiringOrigin(gaw);
+  const originLabel = hiringOriginLabel(gaw);
+
   const nearby = filterWorkers(WORKERS, {
-    origin: hiringOrigin(gaw),
+    origin,
     category: "all",
     query: "",
     radius: 5,
     availableOnly: false,
   }).slice(0, 4);
+
   const count = (s: string) => bookings.filter((b) => b.status === s).length;
   const latest = bookings[0];
   const latestWorker = latest && WORKERS.find((w) => w.id === latest.workerId);
+  const verified = identityVerified(verification);
+  const idStatus = verification.identity?.status ?? "not_submitted";
 
   const onSearch = (e: FormEvent) => {
     e.preventDefault();
     navigate({ to: "/find", search: { q: q.trim() || undefined } });
   };
 
+  const onCustomServiceSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const err = validateCustomService(customService);
+    if (err) {
+      setCustomErr(err);
+      return;
+    }
+    setCustomErr(null);
+    const clean = normalizeService(customService);
+    navigate({ to: "/find", search: { category: clean, q: clean } });
+  };
+
+  const displayedCategories = showAllCats ? CATEGORIES : FEATURED_CATEGORIES;
+
   return (
     <div className="space-y-8">
       <section className="relative overflow-hidden rounded-3xl bg-contour p-5 text-deep-foreground shadow-lift md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-sm text-deep-muted">
-              {greeting()}, {account?.name.split(" ")[0]}
+            <p className="flex flex-wrap items-center gap-2 text-sm text-deep-muted">
+              <span>
+                {greeting()}, {account?.name.split(" ")[0]}
+              </span>
+              {verified && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
+                  <CheckCircle2 className="size-3" aria-hidden /> Verified
+                </span>
+              )}
               {plans.includes("employer") && (
-                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-xs font-bold text-gold-foreground">
-                  <Crown className="size-3" aria-hidden /> Pro
+                <span className="inline-flex items-center gap-1 rounded-full bg-gold px-2 py-0.5 text-xs font-bold text-gold-foreground">
+                  <Crown className="size-3" aria-hidden /> Employer Pro
                 </span>
               )}
             </p>
             <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-4xl">Who do you need today?</h1>
           </div>
-          <div className="w-full md:w-56 [&_label]:text-deep-muted">
-            <LocationFilter id="dash-location" label="Your location" value={locationId} onChange={setLocation} />
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="w-full sm:w-52 [&_label]:text-deep-muted">
+              <LocationFilter id="dash-location" label="Your barangay" value={locationId} onChange={setLocation} />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-11 shrink-0"
+              onClick={() => setShowMapPicker((v) => !v)}
+            >
+              <Navigation className="size-4" />
+              {showMapPicker ? "Hide Map" : "Use GPS / Pin"}
+            </Button>
           </div>
         </div>
+
         <form onSubmit={onSearch} role="search" className="mt-5 flex gap-2">
           <label htmlFor="dash-search" className="sr-only">
             Search workers
@@ -87,8 +166,8 @@ function DashboardBody() {
               id="dash-search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Try “leak repair” or “aircon cleaning”"
-              className="h-12 rounded-xl border-transparent pl-11 text-foreground"
+              placeholder="Try “leak repair”, “aircon cleaning”, or “Motorcycle Mechanic”"
+              className="h-12 rounded-xl border-transparent pl-11 text-foreground dark:border-border dark:bg-card"
             />
           </div>
           <Button type="submit" variant="gold" size="lg" className="h-12">
@@ -97,12 +176,57 @@ function DashboardBody() {
         </form>
       </section>
 
+      {showMapPicker && (
+        <div className="animate-fade-up">
+          <LocationPicker
+            modeLabel="Pinpoint Your Hiring Location (GPS or Map Pin)"
+            initialLocation={origin}
+            initialBarangayId={locationId}
+            initialLabel={serviceLocation?.label}
+            onConfirm={(placed) => {
+              setServiceLocation(placed);
+              setShowMapPicker(false);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Unlimited Service Categories Section */}
       <section aria-labelledby="cat-h">
-        <h2 id="cat-h" className="mb-3 text-lg font-bold tracking-tight">
-          Services
-        </h2>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="cat-h" className="text-lg font-bold tracking-tight">
+            Services
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCustomInput((v) => !v)}
+            >
+              Other / Custom Service
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowAllCats((v) => !v)}
+            >
+              {showAllCats ? (
+                <>
+                  Show fewer <ChevronUp className="size-4" />
+                </>
+              ) : (
+                <>
+                  All {CATEGORIES.length} categories <ChevronDown className="size-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
-          {CATEGORIES.map((c) => {
+          {displayedCategories.map((c) => {
             const Icon = iconFor(c);
             return (
               <Link
@@ -118,16 +242,57 @@ function DashboardBody() {
               </Link>
             );
           })}
+          {showAllCats && (
+            <button
+              type="button"
+              onClick={() => setShowCustomInput(true)}
+              className="group flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed bg-card px-2 py-4 text-center text-sm font-semibold shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary"
+            >
+              <span className="grid size-11 place-items-center rounded-xl bg-gold-soft text-gold-foreground">
+                {(() => {
+                  const Icon = iconFor(OTHER_CATEGORY);
+                  return <Icon className="size-5" aria-hidden />;
+                })()}
+              </span>
+              {OTHER_CATEGORY}
+            </button>
+          )}
         </div>
+
+        {showCustomInput && (
+          <form
+            onSubmit={onCustomServiceSubmit}
+            className="mt-3 animate-fade-up rounded-2xl border bg-card p-4 shadow-soft"
+          >
+            <label htmlFor="custom-home-service" className="block text-xs font-bold uppercase tracking-wide text-primary">
+              Service: Other — Enter Custom Service Name
+            </label>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <Input
+                id="custom-home-service"
+                value={customService}
+                onChange={(e) => setCustomService(e.target.value)}
+                placeholder="e.g. Motorcycle Mechanic, Appliance Technician, Piano Tutor"
+                className="flex-1"
+              />
+              <Button type="submit">Find Custom Service</Button>
+            </div>
+            {customErr && (
+              <p role="alert" className="mt-1.5 text-xs font-medium text-destructive">
+                {customErr}
+              </p>
+            )}
+          </form>
+        )}
       </section>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <section>
           <SectionHeader
-            title={`Nearby in ${barangayName(locationId)}`}
+            title={`Nearby around ${originLabel}`}
             action={
               <Link to="/find" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                See all <ArrowRight className="size-4" aria-hidden />
+                Open Map & Finder <ArrowRight className="size-4" aria-hidden />
               </Link>
             }
           />
@@ -137,7 +302,8 @@ function DashboardBody() {
             ))}
           </div>
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="size-3.5" aria-hidden /> Distances are measured from your selected barangay to each demo worker’s sample area.
+            <MapPin className="size-3.5" aria-hidden /> Distances are calculated from your selected location ({originLabel})
+            to each worker’s service area.
           </p>
         </section>
 
@@ -154,7 +320,7 @@ function DashboardBody() {
             <dl className="grid grid-cols-3 gap-2 text-center">
               {[
                 ["Pending", count("pending")],
-                ["Confirmed", count("confirmed")],
+                ["Active", count("confirmed") + count("in_progress") + count("awaiting_confirmation")],
                 ["Completed", count("completed")],
               ].map(([l, n]) => (
                 <div key={l} className="rounded-xl bg-muted px-2 py-3">
@@ -163,11 +329,16 @@ function DashboardBody() {
                 </div>
               ))}
             </dl>
-            {latest && latestWorker ? (
-              <Link to="/bookings" className="mt-4 flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted">
-                <Avatar initials={latestWorker.initials} size="sm" />
+            {latest ? (
+              <Link
+                to="/bookings"
+                className="mt-4 flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted"
+              >
+                <Avatar initials={latestWorker?.initials ?? "WK"} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{latestWorker.name}</p>
+                  <p className="truncate text-sm font-semibold">
+                    {latestWorker?.name ?? latest.service}
+                  </p>
                   <p className="truncate text-xs text-muted-foreground">{latest.service}</p>
                 </div>
                 <StatusBadge status={latest.status} />
@@ -179,15 +350,40 @@ function DashboardBody() {
             )}
           </section>
 
+          {/* Employer Verification Status Card */}
+          <section className="rounded-2xl border bg-card p-4 shadow-soft">
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
+                <ShieldCheck className="size-4" aria-hidden /> Employer Verification
+              </span>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                {VERIF_LABEL[idStatus]}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Basic identity verification builds trust with local workers. No business license required.
+            </p>
+            <Button asChild size="sm" variant="outline" className="mt-3 w-full">
+              <Link to="/verify">Open Verification Center</Link>
+            </Button>
+          </section>
+
           <Link
             to="/pro"
             className="block rounded-2xl bg-gold-sheen p-5 text-gold-foreground shadow-soft transition-transform hover:-translate-y-0.5"
           >
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
-              <Crown className="size-4" aria-hidden /> GAW Employer Pro
+              <Crown className="size-4" aria-hidden />{" "}
+              {plans.includes("employer") ? "GAW Employer Pro Active" : "GAW Employer Pro"}
             </span>
-            <p className="mt-2 font-bold text-foreground">Saved searches & recurring bookings</p>
-            <p className="mt-1 text-sm">See plans →</p>
+            <p className="mt-2 font-bold text-foreground">
+              {plans.includes("employer")
+                ? "Top-rated filter & priority booking tools unlocked"
+                : "Saved searches & top-rated worker filters"}
+            </p>
+            <p className="mt-1 text-sm">
+              {plans.includes("employer") ? "Manage your Pro membership →" : "See demo plans →"}
+            </p>
           </Link>
         </aside>
       </div>

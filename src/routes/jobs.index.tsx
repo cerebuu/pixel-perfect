@@ -4,9 +4,10 @@ import { Search, SearchX } from "lucide-react";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { JobCard } from "@/components/gaw/cards";
 import { EmptyState, LocationFilter } from "@/components/gaw/primitives";
+import { ServicePicker } from "@/components/gaw/ServicePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CATEGORIES, JOBS, type Category } from "@/lib/gaw/data";
+import { JOBS, type Category } from "@/lib/gaw/data";
 import { filterJobs } from "@/lib/gaw/filter";
 import { useGaw } from "@/lib/gaw/store";
 
@@ -52,18 +53,16 @@ function JobsList() {
           <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input id="jobs-q" type="search" placeholder="Search jobs" value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label htmlFor="jobs-cat" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Category
-            </label>
-            <select id="jobs-cat" className="field" value={category} onChange={(e) => setCategory(e.target.value as Category | "all")}>
-              <option value="all">All categories</option>
-              {CATEGORIES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ServicePicker
+            id="jobs-cat"
+            label="Category"
+            value={category}
+            onChange={(svc) => setCategory(svc)}
+            includeAll
+            allLabel="All categories"
+            allowCustom
+          />
           <LocationFilter id="jobs-area" label="Area" value={area} onChange={setArea} includeAll />
         </div>
         {workerProfile && category !== workerProfile.skill && (

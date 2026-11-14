@@ -11,7 +11,9 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { GAWBrand } from "../components/gaw/GAWBrand";
 import { GawProvider } from "../lib/gaw/store";
+import { ThemeProvider, THEME_BOOT_SCRIPT } from "../lib/gaw/theme";
 import { Toaster } from "../components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
@@ -19,6 +21,9 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
+        <div className="mb-6 flex justify-center">
+          <GAWBrand variant="expanded" size="md" />
+        </div>
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -83,11 +88,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "GAW — Local Work. Nearby Opportunities." },
-      { name: "description", content: "GAW connects Davao City residents with nearby skilled workers." },
-      { name: "theme-color", content: "#123C39" },
-      { property: "og:title", content: "GAW — Local Work. Nearby Opportunities." },
-      { property: "og:description", content: "GAW connects Davao City residents with nearby skilled workers." },
+      { title: "GAW — Grab a Work | Local Work. Nearby Opportunities." },
+      { name: "description", content: "GAW (Grab a Work) connects Davao City residents with nearby skilled workers." },
+      { name: "theme-color", content: "#0E7048" },
+      { property: "og:title", content: "GAW — Grab a Work | Local Work. Nearby Opportunities." },
+      { property: "og:description", content: "GAW (Grab a Work) connects Davao City residents with nearby skilled workers." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -96,7 +101,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "64x64" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -113,8 +120,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
@@ -131,10 +139,12 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <GawProvider>
-        <Outlet />
-        <Toaster position="top-center" richColors closeButton />
-      </GawProvider>
+      <ThemeProvider>
+        <GawProvider>
+          <Outlet />
+          <Toaster position="top-center" richColors closeButton />
+        </GawProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

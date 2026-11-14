@@ -1,13 +1,14 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CalendarDays, CheckCircle2, Loader2, MapPin, Wallet } from "lucide-react";
 import { AppLayout, BackButton } from "@/components/gaw/AppLayout";
 import { Field } from "@/components/gaw/primitives";
+import { VerificationGuardModal } from "@/components/gaw/VerificationCenter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { barangayName, JOBS, type Job } from "@/lib/gaw/data";
-import { useGaw } from "@/lib/gaw/store";
+import { canPerformProtectedAction, useGaw } from "@/lib/gaw/store";
 
 export const Route = createFileRoute("/jobs/$id")({
   loader: ({ params }) => {
@@ -46,12 +47,53 @@ export const Route = createFileRoute("/jobs/$id")({
 });
 
 function JobDetail({ job }: { job: Job }) {
-  const { applications, applyToJob, workerProfile } = useGaw();
-  const already = applications.find((a) => a.jobId === job.id);
+  const { applications, applyToJob, workerProfile, verification } = useGaw();
+  const already = applications.find((a) => a.jobId === job.id && a.status !== "withdrawn");
+  const draftKey = `gaw:job-draft:${job.id}`;
+
   const [message, setMessage] = useState("");
   const [rate, setRate] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showVerifModal, setShowVerifModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.sessionStorage.getItem(draftKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { message?: string; rate?: string };
+        if (parsed.message) setMessage(parsed.message);
+        if (parsed.rate) setRate(parsed.rate);
+      }
+    } catch {
+      /* ignore session storage errors */
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    try {
+      if (message || rate) {
+        window.sessionStorage.setItem(draftKey, JSON.stringify({ message, rate }));
+      }
+    } catch {
+      /* ignore session storage errors */
+    }
+  }, [draftKey, message, rate]);
+
+  const executeApplicationSubmit = () => {
+    setBusy(true);
+    setTimeout(() => {
+      const ok = applyToJob({ jobId: job.id, message: message.trim(), rate: rate.trim() || job.budget });
+      setBusy(false);
+      if (ok) {
+        try {
+          window.sessionStorage.removeItem(draftKey);
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 450);
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -60,11 +102,14 @@ function JobDetail({ job }: { job: Job }) {
       return;
     }
     setError("");
-    setBusy(true);
-    setTimeout(() => {
-      applyToJob({ jobId: job.id, message: message.trim(), rate: rate.trim() || job.budget });
-      setBusy(false);
-    }, 600);
+
+    const guard = canPerformProtectedAction(verification);
+    if (!guard.allowed) {
+      setShowVerifModal(true);
+      return;
+    }
+
+    executeApplicationSubmit();
   };
 
   return (
@@ -143,6 +188,14 @@ function JobDetail({ job }: { job: Job }) {
           </form>
         )}
       </aside>
+
+      <VerificationGuardModal
+        open={showVerifModal}
+        onOpenChange={setShowVerifModal}
+        role="work"
+        actionContext={`Apply for “${job.title}”`}
+        onVerifiedContinue={executeApplicationSubmit}
+      />
     </div>
   );
 }

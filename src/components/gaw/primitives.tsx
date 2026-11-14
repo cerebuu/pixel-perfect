@@ -2,30 +2,70 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { STATUS_LABEL, type BookingStatus } from "@/lib/gaw/bookings";
 import { BARANGAYS } from "@/lib/gaw/data";
+import { GAWBrand, GAWWordmark, type GAWBrandProps } from "./GAWBrand";
 
-export function Logo({ onDeep = false, className }: { onDeep?: boolean; className?: string }) {
+export { GAWBrand, GAWWordmark, type GAWBrandProps };
+
+export function Logo({
+  onDeep = false,
+  variant = "compact",
+  size,
+  proBadge = false,
+  className,
+}: {
+  onDeep?: boolean;
+  variant?: GAWBrandProps["variant"];
+  size?: GAWBrandProps["size"];
+  proBadge?: boolean;
+  className?: string;
+}) {
   return (
-    <span className={cn("inline-flex items-center gap-2 font-extrabold tracking-tight", className)}>
-      <span
-        aria-hidden
-        className={cn(
-          "relative grid size-8 place-items-center rounded-[10px] text-sm",
-          onDeep ? "bg-deep-foreground text-deep" : "bg-primary text-primary-foreground",
-        )}
-      >
-        g
-        <span className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-gold ring-2 ring-background" />
-      </span>
-      <span className={cn("text-xl", onDeep ? "text-deep-foreground" : "text-foreground")}>GAW</span>
-    </span>
+    <GAWBrand
+      variant={variant}
+      size={size}
+      onDeep={onDeep}
+      proBadge={proBadge}
+      className={className}
+    />
   );
 }
 
+/**
+ * HeaderBrand: Standardized left-aligned header branding lockup ([GAW icon] GAW / Grab a Work).
+ * Ensures the brand is established once on the left side of headers without right-side duplication.
+ */
+export function HeaderBrand({
+  size = "sm",
+  onDeep = false,
+  proBadge = false,
+  className,
+}: {
+  size?: GAWBrandProps["size"];
+  onDeep?: boolean;
+  proBadge?: boolean;
+  className?: string;
+}) {
+  return (
+    <GAWBrand
+      variant="expanded"
+      size={size}
+      onDeep={onDeep}
+      proBadge={proBadge}
+      tagline="Grab a Work"
+      className={className}
+    />
+  );
+}
+
+/**
+ * Cohesive forest/emerald/olive avatar tones for Light and Dark Mode.
+ * Avoids muddy brown in Dark Mode while keeping high-contrast initials and subtle border definition.
+ */
 const AVATAR_TONES = [
-  "bg-secondary text-secondary-foreground",
-  "bg-gold-soft text-gold-foreground",
-  "bg-deep text-deep-foreground",
-  "bg-primary text-primary-foreground",
+  "bg-[#E3F5EC] text-[#0E7048] ring-1 ring-inset ring-[#0E7048]/15 dark:bg-[#1E382B] dark:text-[#6EE7A8] dark:ring-[#43C486]/30",
+  "bg-[#E5F0EC] text-[#123C39] ring-1 ring-inset ring-[#123C39]/15 dark:bg-[#1A332B] dark:text-[#8CE8B8] dark:ring-[#43C486]/28",
+  "bg-[#123C39] text-[#F3F7F4] ring-1 ring-inset ring-white/12 dark:bg-[#22392E] dark:text-[#F3F7F4] dark:ring-[#43C486]/30",
+  "bg-[#DCF2E7] text-[#0B5D3B] ring-1 ring-inset ring-[#0E7048]/20 dark:bg-[#20362B] dark:text-[#F4B544] dark:ring-[#F4B544]/28",
 ];
 
 export function Avatar({
@@ -38,11 +78,57 @@ export function Avatar({
   className?: string;
 }) {
   const tone = AVATAR_TONES[[...initials].reduce((n, c) => n + c.charCodeAt(0), 0) % AVATAR_TONES.length];
-  const sz = { sm: "size-9 text-xs", md: "size-12 text-sm", lg: "size-16 text-lg", xl: "size-24 text-2xl" }[size];
+  const sz = {
+    sm: "size-9 text-xs",
+    md: "size-12 text-sm",
+    lg: "size-14 text-base tracking-tight",
+    xl: "size-24 text-2xl",
+  }[size];
   return (
-    <span aria-hidden className={cn("grid shrink-0 place-items-center rounded-2xl font-bold", tone, sz, className)}>
+    <span
+      aria-hidden
+      className={cn("grid shrink-0 place-items-center rounded-2xl font-extrabold select-none", tone, sz, className)}
+    >
       {initials}
     </span>
+  );
+}
+
+export function SkillChip({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border border-border/80 bg-secondary/65 px-2.5 py-0.5 text-[11px] font-semibold text-foreground/90 dark:border-[#34483A] dark:bg-[#22352A] dark:text-[#DCE8E0]",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function PriceDisplay({
+  formattedRate,
+  unit = "/ hour",
+  fallback = "Request Quote",
+  className,
+}: {
+  formattedRate?: string | null | undefined;
+  unit?: string;
+  fallback?: string;
+  className?: string;
+}) {
+  return (
+    <p className={cn("text-sm", className)}>
+      {formattedRate ? (
+        <>
+          <span className="text-base font-extrabold tracking-tight text-foreground">{formattedRate}</span>
+          <span className="ml-1 text-xs font-medium text-muted-foreground">{unit}</span>
+        </>
+      ) : (
+        <span className="text-sm font-semibold text-muted-foreground">{fallback}</span>
+      )}
+    </p>
   );
 }
 
@@ -70,12 +156,15 @@ export function StatusBadge({ status }: { status: BookingStatus }) {
   );
 }
 
-export function Availability({ available }: { available: boolean }) {
+export function Availability({ available, className }: { available: boolean; className?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium">
+    <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", className)}>
       <span
         aria-hidden
-        className={cn("size-2 rounded-full", available ? "bg-primary ring-4 ring-primary/15" : "bg-muted-foreground/40")}
+        className={cn(
+          "size-2 rounded-full",
+          available ? "bg-primary ring-4 ring-primary/20" : "bg-muted-foreground/45",
+        )}
       />
       <span className={available ? "text-primary" : "text-muted-foreground"}>
         {available ? "Available now" : "Busy today"}
@@ -83,6 +172,8 @@ export function Availability({ available }: { available: boolean }) {
     </span>
   );
 }
+
+export const AvailabilityBadge = Availability;
 
 export function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
   return (

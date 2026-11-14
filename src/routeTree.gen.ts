@@ -15,11 +15,16 @@ import { Route as FindRouteImport } from './routes/find'
 import { Route as HireRouteImport } from './routes/hire'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ModeRouteImport } from './routes/mode'
+import { Route as MyJobsRouteImport } from './routes/my-jobs'
+import { Route as ProRouteImport } from './routes/pro'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as BookWorkerIdRouteImport } from './routes/book.$workerId'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
+import { Route as RequestsIdRouteImport } from './routes/requests.$id'
 import { Route as WorkersIdRouteImport } from './routes/workers.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -52,9 +57,29 @@ const ModeRoute = ModeRouteImport.update({
   path: '/mode',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MyJobsRoute = MyJobsRouteImport.update({
+  id: '/my-jobs',
+  path: '/my-jobs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProRoute = ProRouteImport.update({
+  id: '/pro',
+  path: '/pro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyRoute = VerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkRoute = WorkRouteImport.update({
@@ -77,6 +102,11 @@ const JobsIdRoute = JobsIdRouteImport.update({
   path: '/jobs/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RequestsIdRoute = RequestsIdRouteImport.update({
+  id: '/requests/$id',
+  path: '/requests/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkersIdRoute = WorkersIdRouteImport.update({
   id: '/workers/$id',
   path: '/workers/$id',
@@ -90,10 +120,15 @@ export interface FileRoutesByFullPath {
   '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
+  '/my-jobs': typeof MyJobsRoute
+  '/pro': typeof ProRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/verify': typeof VerifyRoute
   '/work': typeof WorkRoute
   '/book/$workerId': typeof BookWorkerIdRoute
   '/jobs/$id': typeof JobsIdRoute
+  '/requests/$id': typeof RequestsIdRoute
   '/workers/$id': typeof WorkersIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -104,10 +139,15 @@ export interface FileRoutesByTo {
   '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
+  '/my-jobs': typeof MyJobsRoute
+  '/pro': typeof ProRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/verify': typeof VerifyRoute
   '/work': typeof WorkRoute
   '/book/$workerId': typeof BookWorkerIdRoute
   '/jobs/$id': typeof JobsIdRoute
+  '/requests/$id': typeof RequestsIdRoute
   '/workers/$id': typeof WorkersIdRoute
   '/jobs': typeof JobsIndexRoute
 }
@@ -119,10 +159,15 @@ export interface FileRoutesById {
   '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
+  '/my-jobs': typeof MyJobsRoute
+  '/pro': typeof ProRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/verify': typeof VerifyRoute
   '/work': typeof WorkRoute
   '/book/$workerId': typeof BookWorkerIdRoute
   '/jobs/$id': typeof JobsIdRoute
+  '/requests/$id': typeof RequestsIdRoute
   '/workers/$id': typeof WorkersIdRoute
   '/jobs/': typeof JobsIndexRoute
 }
@@ -135,10 +180,15 @@ export interface FileRouteTypes {
     | '/hire'
     | '/login'
     | '/mode'
+    | '/my-jobs'
+    | '/pro'
+    | '/settings'
     | '/signup'
+    | '/verify'
     | '/work'
     | '/book/$workerId'
     | '/jobs/$id'
+    | '/requests/$id'
     | '/workers/$id'
     | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
@@ -149,10 +199,15 @@ export interface FileRouteTypes {
     | '/hire'
     | '/login'
     | '/mode'
+    | '/my-jobs'
+    | '/pro'
+    | '/settings'
     | '/signup'
+    | '/verify'
     | '/work'
     | '/book/$workerId'
     | '/jobs/$id'
+    | '/requests/$id'
     | '/workers/$id'
     | '/jobs'
   id:
@@ -163,10 +218,15 @@ export interface FileRouteTypes {
     | '/hire'
     | '/login'
     | '/mode'
+    | '/my-jobs'
+    | '/pro'
+    | '/settings'
     | '/signup'
+    | '/verify'
     | '/work'
     | '/book/$workerId'
     | '/jobs/$id'
+    | '/requests/$id'
     | '/workers/$id'
     | '/jobs/'
   fileRoutesById: FileRoutesById
@@ -178,10 +238,15 @@ export interface RootRouteChildren {
   HireRoute: typeof HireRoute
   LoginRoute: typeof LoginRoute
   ModeRoute: typeof ModeRoute
+  MyJobsRoute: typeof MyJobsRoute
+  ProRoute: typeof ProRoute
+  SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  VerifyRoute: typeof VerifyRoute
   WorkRoute: typeof WorkRoute
   BookWorkerIdRoute: typeof BookWorkerIdRoute
   JobsIdRoute: typeof JobsIdRoute
+  RequestsIdRoute: typeof RequestsIdRoute
   WorkersIdRoute: typeof WorkersIdRoute
   JobsIndexRoute: typeof JobsIndexRoute
 }
@@ -230,11 +295,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/my-jobs': {
+      id: '/my-jobs'
+      path: '/my-jobs'
+      fullPath: '/my-jobs'
+      preLoaderRoute: typeof MyJobsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pro': {
+      id: '/pro'
+      path: '/pro'
+      fullPath: '/pro'
+      preLoaderRoute: typeof ProRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify': {
+      id: '/verify'
+      path: '/verify'
+      fullPath: '/verify'
+      preLoaderRoute: typeof VerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/work': {
@@ -265,6 +358,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JobsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/requests/$id': {
+      id: '/requests/$id'
+      path: '/requests/$id'
+      fullPath: '/requests/$id'
+      preLoaderRoute: typeof RequestsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workers/$id': {
       id: '/workers/$id'
       path: '/workers/$id'
@@ -282,10 +382,15 @@ const rootRouteChildren: RootRouteChildren = {
   HireRoute: HireRoute,
   LoginRoute: LoginRoute,
   ModeRoute: ModeRoute,
+  MyJobsRoute: MyJobsRoute,
+  ProRoute: ProRoute,
+  SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  VerifyRoute: VerifyRoute,
   WorkRoute: WorkRoute,
   BookWorkerIdRoute: BookWorkerIdRoute,
   JobsIdRoute: JobsIdRoute,
+  RequestsIdRoute: RequestsIdRoute,
   WorkersIdRoute: WorkersIdRoute,
   JobsIndexRoute: JobsIndexRoute,
 }

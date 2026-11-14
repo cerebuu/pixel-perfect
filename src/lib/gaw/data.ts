@@ -443,4 +443,4 @@ export const DEMO_PERSONAS = [
   { name: "Maria Santos", initials: "MS" },
   { name: "Carlo Reyes", initials: "CR" },
   { name: "Ana Dimaculangan", initials: "AD" },
-];
+] as const;

@@ -12,12 +12,12 @@ import { filterWorkers, type WorkerWithDistance } from "@/lib/gaw/filter";
 import { useGaw } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
-type FindSearch = { category?: Category; q?: string };
+type FindSearch = { category?: Category | undefined; q?: string | undefined };
 
 export const Route = createFileRoute("/find")({
   validateSearch: (s: Record<string, unknown>): FindSearch => ({
-    category: CATEGORIES.includes(s.category as Category) ? (s.category as Category) : undefined,
-    q: typeof s.q === "string" && s.q ? s.q : undefined,
+    category: CATEGORIES.includes(s["category"] as Category) ? (s["category"] as Category) : undefined,
+    q: typeof s["q"] === "string" && s["q"] ? s["q"] : undefined,
   }),
   head: () => ({
     meta: [
@@ -44,7 +44,7 @@ function bearing(from: { lat: number; lng: number }, to: { lat: number; lng: num
 
 /** Radar view: rings scale to the selected radius; dots placed by simulated distance and direction. */
 function Radar({ workers, barangayId, radius }: { workers: WorkerWithDistance[]; barangayId: string; radius: number }) {
-  const center = BARANGAYS.find((b) => b.id === barangayId) ?? BARANGAYS[0];
+  const center = BARANGAYS.find((b) => b.id === barangayId) ?? BARANGAYS[0]!;
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[300px]">
       {[1, 0.75, 0.5, 0.25].map((r) => (

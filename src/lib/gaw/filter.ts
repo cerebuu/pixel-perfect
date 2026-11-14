@@ -12,7 +12,7 @@ export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; ln
 }
 
 export function simulatedDistance(worker: Worker, fromBarangayId: string) {
-  const from = BARANGAYS.find((b) => b.id === fromBarangayId) ?? BARANGAYS[0];
+  const from = BARANGAYS.find((b) => b.id === fromBarangayId) ?? BARANGAYS[0]!;
   return Math.round(distanceKm(from, worker) * 10) / 10;
 }
 

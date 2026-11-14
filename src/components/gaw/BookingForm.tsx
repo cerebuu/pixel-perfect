@@ -19,7 +19,7 @@ export interface BookingDraft {
 export const TIME_SLOTS = ["08:00", "10:00", "13:00", "15:00", "17:00"];
 
 export function formatTime(t: string) {
-  const [h, m] = t.split(":").map(Number);
+  const [h = 0, m = 0] = t.split(":").map(Number);
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
 }
 
@@ -61,7 +61,7 @@ export function BookingForm({
     const errs = validateBooking(d);
     setErrors(errs);
     if (Object.keys(errs).length === 0) onReview(d);
-    else document.getElementById(Object.keys(errs)[0])?.focus();
+    else document.getElementById(Object.keys(errs)[0] ?? "")?.focus();
   };
 
   const aria = (k: keyof BookingDraft) => ({

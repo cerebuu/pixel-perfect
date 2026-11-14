@@ -99,8 +99,8 @@ export function Field({
 }: {
   id: string;
   label: string;
-  error?: string;
-  hint?: string;
+  error?: string | undefined;
+  hint?: string | undefined;
   children: ReactNode;
 }) {
   return (

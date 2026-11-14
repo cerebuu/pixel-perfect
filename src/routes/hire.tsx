@@ -16,6 +16,13 @@ import { AppLayout } from "@/components/gaw/AppLayout";
 import { WorkerCard } from "@/components/gaw/cards";
 import { iconFor } from "@/components/gaw/categoryIcons";
 import { LocationPicker } from "@/components/gaw/GawMap";
+import {
+  FOCUS_RING,
+  REDUCED_MOTION_RESET,
+  interactiveNavCardClass,
+  subtleArrowIconClass,
+  subtleLinkClass,
+} from "@/components/gaw/interactions";
 import { Avatar, LocationFilter, SectionHeader, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,9 +240,9 @@ function DashboardBody() {
                 key={c}
                 to="/find"
                 search={{ category: c }}
-                className="group flex flex-col items-center gap-2 rounded-2xl border bg-card px-2 py-4 text-center text-sm font-semibold shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary"
+                className={`flex flex-col items-center gap-2 rounded-2xl border bg-card px-2 py-4 text-center text-sm font-semibold shadow-soft ${interactiveNavCardClass}`}
               >
-                <span className="grid size-11 place-items-center rounded-xl bg-secondary text-secondary-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                <span className="grid size-11 place-items-center rounded-xl bg-secondary text-secondary-foreground transition-[background-color,color,transform] duration-150 group-hover:scale-105 group-hover:bg-primary group-hover:text-primary-foreground motion-reduce:group-hover:scale-100">
                   <Icon className="size-5" aria-hidden />
                 </span>
                 {c}
@@ -246,9 +253,9 @@ function DashboardBody() {
             <button
               type="button"
               onClick={() => setShowCustomInput(true)}
-              className="group flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed bg-card px-2 py-4 text-center text-sm font-semibold shadow-soft transition-all hover:-translate-y-0.5 hover:border-primary"
+              className={`flex flex-col items-center gap-2 rounded-2xl border border-dashed bg-card px-2 py-4 text-center text-sm font-semibold shadow-soft ${interactiveNavCardClass}`}
             >
-              <span className="grid size-11 place-items-center rounded-xl bg-gold-soft text-gold-foreground">
+              <span className="grid size-11 place-items-center rounded-xl bg-gold-soft text-gold-foreground transition-transform duration-150 group-hover:scale-105 motion-reduce:group-hover:scale-100">
                 {(() => {
                   const Icon = iconFor(OTHER_CATEGORY);
                   return <Icon className="size-5" aria-hidden />;
@@ -291,8 +298,8 @@ function DashboardBody() {
           <SectionHeader
             title={`Nearby around ${originLabel}`}
             action={
-              <Link to="/find" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                Open Map & Finder <ArrowRight className="size-4" aria-hidden />
+              <Link to="/find" className={subtleLinkClass}>
+                Open Map & Finder <ArrowRight className={subtleArrowIconClass} aria-hidden />
               </Link>
             }
           />
@@ -312,7 +319,7 @@ function DashboardBody() {
             <SectionHeader
               title="My bookings"
               action={
-                <Link to="/bookings" className="text-sm font-semibold text-primary">
+                <Link to="/bookings" className={subtleLinkClass}>
                   View all
                 </Link>
               }
@@ -332,7 +339,7 @@ function DashboardBody() {
             {latest ? (
               <Link
                 to="/bookings"
-                className="mt-4 flex items-center gap-3 rounded-xl border p-3 transition-colors hover:bg-muted"
+                className={`mt-4 flex items-center gap-3 rounded-xl border bg-card/60 p-3 ${interactiveNavCardClass}`}
               >
                 <Avatar initials={latestWorker?.initials ?? "WK"} size="sm" />
                 <div className="min-w-0 flex-1">
@@ -370,7 +377,7 @@ function DashboardBody() {
 
           <Link
             to="/pro"
-            className="block rounded-2xl bg-gold-sheen p-5 text-gold-foreground shadow-soft transition-transform hover:-translate-y-0.5"
+            className={`block cursor-pointer rounded-2xl bg-gold-sheen p-5 text-gold-foreground shadow-soft transition-[transform,box-shadow,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:-translate-y-0.5 hover:shadow-lift hover:brightness-[1.03] active:translate-y-0 active:scale-[0.995] ${FOCUS_RING} ${REDUCED_MOTION_RESET}`}
           >
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
               <Crown className="size-4" aria-hidden />{" "}

@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, SearchX } from "lucide-react";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { JobCard } from "@/components/gaw/cards";
+import { filterTabPillClass } from "@/components/gaw/interactions";
 import { EmptyState, LocationFilter } from "@/components/gaw/primitives";
 import { ServicePicker } from "@/components/gaw/ServicePicker";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,10 @@ function JobsList() {
           <button
             type="button"
             onClick={() => setCategory(workerProfile.skill)}
-            className="cursor-pointer text-sm font-semibold text-primary underline-offset-4 hover:underline"
+            className={filterTabPillClass(
+              false,
+              "inline-flex h-8 items-center rounded-full border border-primary/25 bg-secondary/40 px-3 text-xs font-semibold text-primary hover:border-primary/50 hover:text-primary",
+            )}
           >
             Show only {workerProfile.skill} jobs
           </button>

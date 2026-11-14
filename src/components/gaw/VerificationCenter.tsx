@@ -16,6 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { REDUCED_MOTION_RESET, segmentedOptionClass, subtleLinkClass } from "./interactions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -360,7 +361,7 @@ export function VerificationGuardModal({
                     <Link
                       to="/verify"
                       onClick={() => onOpenChange(false)}
-                      className="font-semibold text-primary underline-offset-4 hover:underline"
+                      className={subtleLinkClass}
                     >
                       Go to Account Settings → Verification Center
                     </Link>
@@ -387,7 +388,12 @@ export function VerificationGuardModal({
                   </div>
 
                   <div className="grid gap-2.5 sm:grid-cols-2">
-                    <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed bg-muted/40 p-3.5 text-center transition-colors hover:border-primary">
+                    <label
+                      className={cn(
+                        "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed bg-muted/40 p-3.5 text-center transition-[background-color,border-color,box-shadow,transform] duration-180 ease-out hover:-translate-y-[1px] hover:border-primary hover:bg-hover-surface/65 hover:shadow-soft active:translate-y-0 active:scale-[0.99] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                        REDUCED_MOTION_RESET,
+                      )}
+                    >
                       <Upload className="size-4 text-primary" aria-hidden />
                       <span className="text-xs font-bold">Upload ID Photo / PDF</span>
                       <span className="text-[11px] text-muted-foreground">Max {MAX_FILE_MB} MB</span>
@@ -403,7 +409,10 @@ export function VerificationGuardModal({
                     <button
                       type="button"
                       onClick={handleUseSampleIdentity}
-                      className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border bg-gold-soft/60 p-3.5 text-center text-gold-foreground transition-colors hover:border-gold"
+                      className={cn(
+                        "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border bg-gold-soft/60 p-3.5 text-center text-gold-foreground transition-[background-color,border-color,box-shadow,transform] duration-180 ease-out hover:-translate-y-[1px] hover:border-gold hover:bg-gold-soft hover:shadow-soft active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        REDUCED_MOTION_RESET,
+                      )}
                     >
                       <Sparkles className="size-4" aria-hidden />
                       <span className="text-xs font-bold">Use Sample ID (Demo)</span>
@@ -642,24 +651,20 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
             <p className="text-xs font-semibold text-muted-foreground">
               Viewing requirements for:
             </p>
-            <div className="inline-flex rounded-full border bg-muted p-1 text-xs font-semibold">
+            <div className="inline-flex rounded-full border border-border/60 bg-muted p-1 text-xs font-semibold">
               <button
                 type="button"
+                aria-pressed={roleView === "work"}
                 onClick={() => setRoleView("work")}
-                className={cn(
-                  "cursor-pointer rounded-full px-3.5 py-1.5 transition-colors",
-                  roleView === "work" ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground",
-                )}
+                className={segmentedOptionClass(roleView === "work", "card", "rounded-full px-3.5 py-1.5")}
               >
                 Worker Verification
               </button>
               <button
                 type="button"
+                aria-pressed={roleView === "hire"}
                 onClick={() => setRoleView("hire")}
-                className={cn(
-                  "cursor-pointer rounded-full px-3.5 py-1.5 transition-colors",
-                  roleView === "hire" ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground",
-                )}
+                className={segmentedOptionClass(roleView === "hire", "card", "rounded-full px-3.5 py-1.5")}
               >
                 Employer Verification
               </button>
@@ -813,7 +818,12 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed bg-muted/40 p-4 text-center transition-colors hover:border-primary">
+              <label
+                className={cn(
+                  "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed bg-muted/40 p-4 text-center transition-[background-color,border-color,box-shadow,transform] duration-180 ease-out hover:-translate-y-[1px] hover:border-primary hover:bg-hover-surface/65 hover:shadow-soft active:translate-y-0 active:scale-[0.99] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                  REDUCED_MOTION_RESET,
+                )}
+              >
                 <Upload className="size-5 text-primary" aria-hidden />
                 <span className="text-xs font-bold">Upload ID Photo or PDF</span>
                 <span className="text-[11px] text-muted-foreground">JPG, PNG, WEBP, or PDF · Max {MAX_FILE_MB} MB</span>
@@ -829,7 +839,10 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
               <button
                 type="button"
                 onClick={handleUseSampleIdentity}
-                className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border bg-gold-soft/60 p-4 text-center text-gold-foreground transition-colors hover:border-gold"
+                className={cn(
+                  "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl border bg-gold-soft/60 p-4 text-center text-gold-foreground transition-[background-color,border-color,box-shadow,transform] duration-180 ease-out hover:-translate-y-[1px] hover:border-gold hover:bg-gold-soft hover:shadow-soft active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  REDUCED_MOTION_RESET,
+                )}
               >
                 <Sparkles className="size-5" aria-hidden />
                 <span className="text-xs font-bold">Use Sample Document (Demo)</span>
@@ -968,7 +981,12 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                   ) : (
                     <div className="mt-3 space-y-3">
                       <div className="flex flex-wrap gap-2">
-                        <label className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border bg-card px-3 text-xs font-semibold hover:border-primary">
+                        <label
+                          className={cn(
+                            "inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border bg-card px-3 text-xs font-semibold transition-[background-color,border-color,color,transform] duration-150 ease-out hover:border-hover-border hover:bg-hover-surface active:scale-[0.98] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                            REDUCED_MOTION_RESET,
+                          )}
+                        >
                           <Upload className="size-3.5 text-primary" aria-hidden />
                           Upload File
                           <input

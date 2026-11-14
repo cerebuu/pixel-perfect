@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Check, Pencil, Plus, ShieldCheck, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { LocationPicker } from "./GawMap";
+import { iconActionButtonClass } from "./interactions";
 import { Field } from "./primitives";
 import { ServicePicker } from "./ServicePicker";
 import { Button } from "@/components/ui/button";
@@ -169,7 +170,7 @@ export function ProfileSetup({
                       <button
                         type="button"
                         onClick={() => handleSaveEditedSkill(idx)}
-                        className="cursor-pointer rounded-full p-0.5 text-primary hover:bg-secondary"
+                        className={iconActionButtonClass("default", "p-1 text-primary")}
                         aria-label="Save edited skill"
                       >
                         <Check className="size-3.5" />
@@ -184,7 +185,7 @@ export function ProfileSetup({
                           setEditingIndex(idx);
                           setEditingValue(s);
                         }}
-                        className="cursor-pointer rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+                        className={iconActionButtonClass("default", "p-1")}
                         title={`Edit ${s}`}
                         aria-label={`Edit skill ${s}`}
                       >
@@ -193,7 +194,7 @@ export function ProfileSetup({
                       <button
                         type="button"
                         onClick={() => handleRemoveSkill(s)}
-                        className="cursor-pointer rounded-full p-0.5 text-muted-foreground hover:text-destructive"
+                        className={iconActionButtonClass("destructive", "p-1")}
                         title={`Remove ${s}`}
                         aria-label={`Remove skill ${s}`}
                       >
@@ -248,7 +249,7 @@ export function ProfileSetup({
                     key={s}
                     type="button"
                     onClick={() => handleAddSkill(s)}
-                    className="cursor-pointer rounded-full border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                    className="cursor-pointer rounded-full border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-[background-color,border-color,color,transform] duration-150 ease-out hover:-translate-y-[0.5px] hover:border-hover-border hover:bg-hover-surface hover:text-foreground active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
                   >
                     + {s}
                   </button>

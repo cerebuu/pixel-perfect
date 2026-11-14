@@ -209,10 +209,10 @@ export function ServicePicker({
                       applyCustomService(s);
                     }}
                     className={cn(
-                      "cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                      "cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100",
                       value.toLowerCase() === s.toLowerCase()
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "bg-card text-muted-foreground hover:border-primary hover:text-foreground",
+                        ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                        : "bg-card text-muted-foreground hover:border-hover-border hover:bg-hover-surface hover:text-foreground",
                     )}
                   >
                     + {s}

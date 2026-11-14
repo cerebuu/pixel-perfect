@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { formatTime } from "@/components/gaw/BookingForm";
 import { LiveJobSharingCard } from "@/components/gaw/GawMap";
+import { filterTabPillClass, subtleLinkClass } from "@/components/gaw/interactions";
 import { Avatar, EmptyState, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import {
@@ -163,7 +164,7 @@ function MyJobsManager() {
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-card px-4 py-3 text-xs text-muted-foreground shadow-soft">
         <span>
           <strong>Live Shared State:</strong> Actions here immediately sync with the Employer{" "}
-          <Link to="/bookings" className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link to="/bookings" className={cn(subtleLinkClass, "inline text-[length:inherit]")}>
             My Bookings
           </Link>{" "}
           dashboard.
@@ -179,7 +180,7 @@ function MyJobsManager() {
       <div
         role="tablist"
         aria-label="My Jobs categories"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+        className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1.5"
       >
         {MY_JOBS_TABS.map((t) => {
           const active = activeTab === t.key;
@@ -190,11 +191,9 @@ function MyJobsManager() {
               role="tab"
               aria-selected={active}
               onClick={() => setActiveTab(t.key)}
-              className={cn(
-                "inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors",
-                active
-                  ? "border-deep bg-deep text-deep-foreground shadow-soft"
-                  : "bg-card text-muted-foreground hover:text-foreground",
+              className={filterTabPillClass(
+                active,
+                "inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold",
               )}
             >
               <span>{t.label}</span>

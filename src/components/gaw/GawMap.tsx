@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Compass, Crosshair, Loader2, LocateFixed, MapPin, Navigation, Radio, RefreshCw, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { segmentedOptionClass } from "./interactions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BARANGAYS, barangayName, DAVAO_CENTER, nearestBarangay, RADIUS_OPTIONS } from "@/lib/gaw/data";
@@ -646,17 +647,14 @@ export function LocationPicker({
           <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Working Radius (Service Coverage Circle)
           </legend>
-          <div className="grid grid-cols-4 gap-1.5 rounded-xl bg-muted p-1">
+          <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-border/50 bg-muted p-1">
             {RADIUS_OPTIONS.map((r) => (
               <button
                 key={r}
                 type="button"
                 aria-pressed={radiusKm === r}
                 onClick={() => onRadiusChange(r)}
-                className={cn(
-                  "h-9 cursor-pointer rounded-lg text-xs font-bold transition-all",
-                  radiusKm === r ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-foreground",
-                )}
+                className={segmentedOptionClass(radiusKm === r, "card", "h-9 rounded-lg text-xs font-bold")}
               >
                 {r} km
               </button>

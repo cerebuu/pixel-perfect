@@ -32,6 +32,14 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-hover-surface: var(--hover-surface);
+  --color-hover-surface-strong: var(--hover-surface-strong);
+  --color-hover-border: var(--hover-border);
+  --color-warning: var(--warning);
+  --color-warning-hover-surface: var(--warning-hover-surface);
+  --color-warning-hover-border: var(--warning-hover-border);
+  --color-danger-hover-surface: var(--danger-hover-surface);
+  --color-danger-hover-border: var(--danger-hover-border);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -110,6 +118,14 @@
   --muted-foreground: oklch(0.539 0.024 169.9);
   --accent: oklch(0.948 0.03 156);
   --accent-foreground: oklch(0.326 0.046 188.6);
+  --hover-surface: rgba(14, 112, 72, 0.09);
+  --hover-surface-strong: rgba(14, 112, 72, 0.14);
+  --hover-border: rgba(14, 112, 72, 0.30);
+  --warning: oklch(0.54 0.14 70);
+  --warning-hover-surface: rgba(217, 148, 22, 0.12);
+  --warning-hover-border: rgba(217, 148, 22, 0.32);
+  --danger-hover-surface: rgba(209, 67, 67, 0.09);
+  --danger-hover-border: rgba(209, 67, 67, 0.25);
   --destructive: oklch(0.55 0.19 27);
   --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.915 0.012 150);
@@ -173,8 +189,16 @@
   --secondary-foreground: #8CE8B8;
   --muted: #111F19;
   --muted-foreground: #B5C8BC;
-  --accent: #22352A;
-  --accent-foreground: #F3F7F4;
+  --accent: #264033;
+  --accent-foreground: #FFFFFF;
+  --hover-surface: rgba(67, 196, 134, 0.13);
+  --hover-surface-strong: rgba(67, 196, 134, 0.20);
+  --hover-border: rgba(67, 196, 134, 0.28);
+  --warning: #F4B544;
+  --warning-hover-surface: rgba(244, 181, 68, 0.13);
+  --warning-hover-border: rgba(244, 181, 68, 0.28);
+  --danger-hover-surface: rgba(240, 128, 121, 0.14);
+  --danger-hover-border: rgba(240, 128, 121, 0.28);
   --destructive: #F08079;
   --destructive-foreground: #190605;
   --border: #34483A;
@@ -256,7 +280,14 @@
   padding-inline: 0.875rem;
   font-size: 0.9375rem;
   color: var(--color-foreground);
-  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-out;
+  &:hover:not(:disabled) {
+    border-color: var(--hover-border);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
   &:focus-visible {
     outline: none;
     border-color: var(--color-ring);
@@ -303,6 +334,23 @@
   font-family: var(--font-sans);
   z-index: 10;
   background-color: #E6ECE8;
+}
+
+.leaflet-control-zoom a {
+  transition: background-color 0.16s ease-out, color 0.16s ease-out;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #EDF7F1 !important;
+  color: #0E7048 !important;
+}
+
+.gaw-worker-marker button {
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease-out;
+}
+
+.gaw-worker-marker button:hover {
+  transform: scale(1.1);
 }
 
 .dark .leaflet-container {

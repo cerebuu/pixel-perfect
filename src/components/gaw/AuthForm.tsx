@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, Info, Loader2, ShieldCheck } from "lucide-react";
+import { FOCUS_RING, iconActionButtonClass, subtleLinkClass } from "./interactions";
 import { Field } from "./primitives";
 import { GAWBrand } from "./GAWBrand";
 import { Button } from "@/components/ui/button";
@@ -110,7 +111,7 @@ export function AuthForm({ kind }: { kind: Kind }) {
               type="button"
               onClick={toggleVisible}
               aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={iconActionButtonClass("default", "absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5")}
             >
               {visible ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
             </button>
@@ -123,7 +124,11 @@ export function AuthForm({ kind }: { kind: Kind }) {
   return (
     <div className="mx-auto w-full max-w-md">
       <div className="flex items-center justify-between">
-        <Link to="/" aria-label="GAW welcome page" className="inline-flex">
+        <Link
+          to="/"
+          aria-label="GAW welcome page"
+          className={`inline-flex rounded-2xl transition-opacity duration-150 hover:opacity-90 ${FOCUS_RING}`}
+        >
           <GAWBrand variant="expanded" size="lg" />
         </Link>
       </div>
@@ -149,7 +154,7 @@ export function AuthForm({ kind }: { kind: Kind }) {
             <div className="space-y-1.5">
               <label
                 htmlFor="terms"
-                className="flex cursor-pointer items-start gap-2.5 rounded-2xl border bg-muted/40 p-3.5 text-xs leading-relaxed"
+                className="flex cursor-pointer items-start gap-2.5 rounded-2xl border bg-muted/40 p-3.5 text-xs leading-relaxed transition-[border-color,background-color] duration-150 hover:border-hover-border hover:bg-muted/70 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
               >
                 <input
                   id="terms"
@@ -205,7 +210,7 @@ export function AuthForm({ kind }: { kind: Kind }) {
 
         <p className="mt-5 text-center text-sm text-muted-foreground">
           {kind === "signup" ? "Already have an account? " : "New to GAW? "}
-          <Link to={kind === "signup" ? "/login" : "/signup"} className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link to={kind === "signup" ? "/login" : "/signup"} className={subtleLinkClass}>
             {kind === "signup" ? "Log in" : "Sign up"}
           </Link>
         </p>

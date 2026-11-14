@@ -14,6 +14,7 @@ import {
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { WorkerCard } from "@/components/gaw/cards";
 import { InteractiveMap, LocationPicker } from "@/components/gaw/GawMap";
+import { iconActionButtonClass, segmentedOptionClass, subtleLinkClass } from "@/components/gaw/interactions";
 import { Avatar, Availability, EmptyState, LocationFilter } from "@/components/gaw/primitives";
 import { ServicePicker } from "@/components/gaw/ServicePicker";
 import { Button } from "@/components/ui/button";
@@ -193,9 +194,10 @@ function NearbyFinder() {
               type="button"
               aria-pressed={viewMode === k}
               onClick={() => setViewMode(k)}
-              className={cn(
-                "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 transition-colors",
-                viewMode === k ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-foreground",
+              className={segmentedOptionClass(
+                viewMode === k,
+                "card",
+                "inline-flex h-8 items-center gap-1.5 rounded-full px-3",
               )}
             >
               <Icon className="size-3.5" aria-hidden />
@@ -274,9 +276,10 @@ function NearbyFinder() {
                     type="button"
                     aria-pressed={radius === r}
                     onClick={() => setRadius(r)}
-                    className={cn(
-                      "h-10 cursor-pointer rounded-lg text-sm font-semibold transition-all",
-                      radius === r ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-foreground",
+                    className={segmentedOptionClass(
+                      radius === r,
+                      "card",
+                      "h-10 rounded-lg text-sm font-semibold",
                     )}
                   >
                     {r} km
@@ -299,7 +302,7 @@ function NearbyFinder() {
                   <Crown className="size-3.5 text-gold" aria-hidden /> Top-Rated Only (4.8★+)
                 </label>
                 {!isEmployerPro && (
-                  <Link to="/pro" className="text-[11px] font-semibold text-primary underline">
+                  <Link to="/pro" className={cn(subtleLinkClass, "mt-0.5 text-[11px] underline")}>
                     Unlock with GAW Employer Pro (Demo) →
                   </Link>
                 )}
@@ -383,7 +386,7 @@ function NearbyFinder() {
                     <button
                       type="button"
                       onClick={() => setSelectedWorker(null)}
-                      className="cursor-pointer rounded-full p-1 text-muted-foreground hover:text-foreground"
+                      className={iconActionButtonClass("default", "size-7 shrink-0")}
                       aria-label="Close selected worker preview"
                     >
                       <X className="size-4" />

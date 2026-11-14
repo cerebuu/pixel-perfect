@@ -20,11 +20,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { GAWBrand } from "./GAWBrand";
+import { FOCUS_RING, REDUCED_MOTION_RESET, segmentedOptionClass } from "./interactions";
 import { Avatar, HeaderBrand } from "./primitives";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuHighlightGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -83,10 +85,7 @@ export function ModeSwitcher({ className }: { className?: string }) {
           type="button"
           aria-pressed={current === m}
           onClick={() => go(m)}
-          className={cn(
-            "min-h-9 cursor-pointer rounded-full px-3.5 transition-colors",
-            current === m ? "bg-deep text-deep-foreground" : "text-muted-foreground hover:text-foreground",
-          )}
+          className={segmentedOptionClass(current === m, "deep", "min-h-9 rounded-full px-3.5")}
         >
           {m === "hire" ? "Hiring" : "Working"}
         </button>
@@ -122,10 +121,10 @@ export function ThemeSegmentedControl({ compact = false }: { compact?: boolean }
             aria-label={`${opt.label} theme`}
             title={`${opt.label} theme`}
             onClick={() => setPref(opt.key)}
-            className={cn(
-              "inline-flex cursor-pointer items-center gap-1 rounded-full transition-colors",
-              compact ? "h-8 px-2" : "h-8 px-3",
-              active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            className={segmentedOptionClass(
+              active,
+              "primary",
+              cn("inline-flex items-center gap-1 rounded-full", compact ? "h-8 px-2" : "h-8 px-3"),
             )}
           >
             <Icon className="size-3.5" aria-hidden />
@@ -155,7 +154,15 @@ export function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="relative cursor-pointer rounded-2xl" aria-label="Account menu">
+        <button
+          type="button"
+          className={cn(
+            "group relative cursor-pointer rounded-2xl transition-[box-shadow,transform,filter] duration-180 ease-out hover:ring-2 hover:ring-primary/55 hover:ring-offset-2 hover:ring-offset-background hover:brightness-105 active:scale-[0.96] aria-[expanded=true]:ring-2 aria-[expanded=true]:ring-primary aria-[expanded=true]:ring-offset-2 aria-[expanded=true]:ring-offset-background",
+            FOCUS_RING,
+            REDUCED_MOTION_RESET,
+          )}
+          aria-label="Account menu"
+        >
           <Avatar initials={initials} size="sm" />
           {verified && (
             <span
@@ -183,9 +190,9 @@ export function AccountMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        <div className="px-2 py-1.5">
+        <div className="px-2.5 py-1.5">
           <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Appearance</p>
-          <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1">
+          <div className="grid grid-cols-3 gap-1 rounded-xl border border-border/50 bg-muted p-1">
             {(
               [
                 ["light", "Light", Sun],
@@ -198,9 +205,10 @@ export function AccountMenu() {
                 type="button"
                 aria-pressed={pref === k}
                 onClick={() => setPref(k)}
-                className={cn(
-                  "inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg text-xs font-semibold transition-colors",
-                  pref === k ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-foreground",
+                className={segmentedOptionClass(
+                  pref === k,
+                  "card",
+                  "inline-flex h-8 items-center justify-center gap-1 rounded-lg text-xs font-semibold",
                 )}
               >
                 <Icon className="size-3.5" aria-hidden />
@@ -211,33 +219,37 @@ export function AccountMenu() {
         </div>
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => navigate({ to: "/verify" })}>
-          <ShieldCheck /> Verification Center
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => navigate({ to: "/settings" })}>
-          <Settings /> Account Settings
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => navigate({ to: "/pro" })}>
-          <Crown /> GAW Pro Subscription
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={() => {
-            resetDemo();
-            toast("Demo data reset");
-            navigate({ to: "/" });
-          }}
-        >
-          <RotateCcw /> Reset demo data
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() => {
-            logOut();
-            navigate({ to: "/" });
-          }}
-        >
-          <LogOut /> Log out
-        </DropdownMenuItem>
+        <DropdownMenuHighlightGroup>
+          <DropdownMenuItem onSelect={() => navigate({ to: "/verify" })}>
+            <ShieldCheck /> Verification Center
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate({ to: "/settings" })}>
+            <Settings /> Account Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate({ to: "/pro" })}>
+            <Crown /> GAW Pro Subscription
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            tone="warning"
+            onSelect={() => {
+              resetDemo();
+              toast("Demo data reset");
+              navigate({ to: "/" });
+            }}
+          >
+            <RotateCcw /> Reset demo data
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            tone="destructive"
+            onSelect={() => {
+              logOut();
+              navigate({ to: "/" });
+            }}
+          >
+            <LogOut /> Log out
+          </DropdownMenuItem>
+        </DropdownMenuHighlightGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -282,24 +294,42 @@ export function AppLayout({
     <div className="min-h-screen pb-24 md:pb-10">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 md:gap-4 md:px-6">
-          <Link to={navMode === "hire" ? "/hire" : "/work"} aria-label="GAW — Grab a Work home" className="shrink-0">
+          <Link
+            to={navMode === "hire" ? "/hire" : "/work"}
+            aria-label="GAW — Grab a Work home"
+            className={cn(
+              "shrink-0 rounded-2xl transition-opacity duration-150 hover:opacity-90 active:scale-[0.98]",
+              FOCUS_RING,
+              REDUCED_MOTION_RESET,
+            )}
+          >
             <HeaderBrand size="sm" proBadge={gaw.plans.length > 0} />
           </Link>
           <nav aria-label="Main" className="ml-4 hidden items-center gap-1 md:flex">
-            {items.map((it) => (
-              <Link
-                key={it.to}
-                to={it.to}
-                className={cn(
-                  "inline-flex h-10 items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition-colors",
-                  isActive(it.to) ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground",
-                  it.to === "/pro" && !isActive(it.to) && "text-gold-foreground dark:text-gold",
-                )}
-              >
-                <it.icon className="size-4" aria-hidden />
-                {it.label}
-              </Link>
-            ))}
+            {items.map((it) => {
+              const active = isActive(it.to);
+              const isPro = it.to === "/pro";
+              return (
+                <Link
+                  key={it.to}
+                  to={it.to}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "group relative inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl px-3.5 text-sm font-semibold transition-[background-color,color,box-shadow,transform,filter] duration-160 ease-out active:scale-[0.97] [&>svg]:size-4 [&>svg]:transition-[color,transform] [&>svg]:duration-160",
+                    FOCUS_RING,
+                    REDUCED_MOTION_RESET,
+                    active
+                      ? "bg-secondary text-secondary-foreground shadow-xs ring-1 ring-inset ring-primary/20 dark:ring-primary/35 [&>svg]:text-primary"
+                      : isPro
+                        ? "text-gold-foreground hover:bg-warning-hover-surface hover:brightness-105 hover:[&>svg]:scale-110 dark:text-gold"
+                        : "text-muted-foreground hover:bg-hover-surface hover:text-foreground hover:[&>svg]:scale-110 hover:[&>svg]:text-primary",
+                  )}
+                >
+                  <it.icon aria-hidden />
+                  {it.label}
+                </Link>
+              );
+            })}
           </nav>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden sm:block">
@@ -328,18 +358,29 @@ export function AppLayout({
         <ul className="mx-auto grid max-w-md grid-cols-4">
           {items.map((it) => {
             const active = isActive(it.to);
+            const isPro = it.to === "/pro";
             return (
               <li key={it.to}>
                 <Link
                   to={it.to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-16 flex-col items-center justify-center gap-1 text-[0.7rem] font-semibold transition-colors",
-                    active ? "text-primary" : "text-muted-foreground",
-                    it.to === "/pro" && !active && "text-gold-foreground dark:text-gold",
+                    "group flex h-16 cursor-pointer flex-col items-center justify-center gap-1 text-[0.7rem] font-semibold transition-[color,transform] duration-150 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+                    REDUCED_MOTION_RESET,
+                    active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                    isPro && !active && "text-gold-foreground dark:text-gold",
                   )}
                 >
-                  <span className={cn("grid h-7 w-12 place-items-center rounded-full", active && "bg-secondary")}>
+                  <span
+                    className={cn(
+                      "grid h-7 w-12 place-items-center rounded-full transition-[background-color,color,transform] duration-150",
+                      active
+                        ? "bg-secondary ring-1 ring-inset ring-primary/20 dark:ring-primary/35"
+                        : isPro
+                          ? "group-hover:bg-warning-hover-surface"
+                          : "group-hover:bg-hover-surface group-hover:text-primary",
+                    )}
+                  >
                     <it.icon className="size-5" aria-hidden />
                   </span>
                   {it.label}

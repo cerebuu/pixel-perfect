@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { formatTime } from "@/components/gaw/BookingForm";
 import { LiveJobSharingCard } from "@/components/gaw/GawMap";
+import { filterTabPillClass, subtleLinkClass } from "@/components/gaw/interactions";
 import { Avatar, EmptyState, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import { STATUS_LABEL, type BookingAction } from "@/lib/gaw/bookings";
@@ -85,7 +86,7 @@ function BookingsList() {
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-card px-4 py-3 text-xs text-muted-foreground shadow-soft">
         <span>
           <strong>Shared Booking State:</strong> Status changes in Worker{" "}
-          <Link to="/my-jobs" className="font-semibold text-primary underline-offset-4 hover:underline">
+          <Link to="/my-jobs" className={cn(subtleLinkClass, "inline text-[length:inherit]")}>
             My Jobs
           </Link>{" "}
           immediately update here.
@@ -96,7 +97,7 @@ function BookingsList() {
       </div>
 
       {/* Filter pills */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" role="group" aria-label="Filter by status">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1.5" role="group" aria-label="Filter by status">
         {FILTERS.map((f) => {
           const n = f.key === "all" ? bookings.length : bookings.filter((b) => b.status === f.key).length;
           return (
@@ -105,11 +106,9 @@ function BookingsList() {
               type="button"
               aria-pressed={filter === f.key}
               onClick={() => setFilter(f.key)}
-              className={cn(
-                "h-10 shrink-0 cursor-pointer rounded-full border px-4 text-sm font-semibold transition-colors",
-                filter === f.key
-                  ? "border-deep bg-deep text-deep-foreground"
-                  : "bg-card text-muted-foreground hover:text-foreground",
+              className={filterTabPillClass(
+                filter === f.key,
+                "h-10 shrink-0 rounded-full border px-4 text-sm font-semibold",
               )}
             >
               {f.label} <span className="opacity-70">({n})</span>
@@ -144,7 +143,14 @@ function BookingsList() {
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         {w.isLinkable ? (
-                          <Link to="/workers/$id" params={{ id: w.id }} className="font-bold hover:underline">
+                          <Link
+                            to="/workers/$id"
+                            params={{ id: w.id }}
+                            className={cn(
+                              subtleLinkClass,
+                              "inline text-base font-bold text-foreground hover:text-primary",
+                            )}
+                          >
                             {w.name}
                           </Link>
                         ) : (
@@ -208,7 +214,7 @@ function BookingsList() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-muted-foreground">
                         Respond in{" "}
-                        <Link to="/my-jobs" className="text-primary underline">
+                        <Link to="/my-jobs" className={cn(subtleLinkClass, "inline text-[length:inherit] underline")}>
                           Worker My Jobs
                         </Link>{" "}
                         or simulate worker response:

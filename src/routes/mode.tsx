@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import roleFindWorkImg from "@/assets/role-find-work.jpg";
 import roleHireWorkerImg from "@/assets/role-hire-worker.jpg";
 import { AccountMenu, ThemeToggle, useRequireSignIn } from "@/components/gaw/AppLayout";
+import { FOCUS_RING, REDUCED_MOTION_RESET } from "@/components/gaw/interactions";
 import { HeaderBrand } from "@/components/gaw/primitives";
 import { useGaw, type Mode } from "@/lib/gaw/store";
 
@@ -53,7 +54,7 @@ function ModeSelector({ onPick }: { onPick: (m: Mode) => void }) {
           type="button"
           onClick={() => onPick(c.mode)}
           style={{ animationDelay: `${i * 80}ms` }}
-          className={`group relative flex h-full min-h-[230px] animate-fade-up cursor-pointer flex-col justify-end overflow-hidden rounded-3xl border bg-[#0D1A15] p-6 text-left text-white shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:min-h-[260px] sm:p-7 md:min-h-[296px] md:p-8 lg:min-h-[324px] lg:p-10 ${c.borderTone}`}
+          className={`group relative flex h-full min-h-[230px] animate-fade-up cursor-pointer flex-col justify-end overflow-hidden rounded-3xl border bg-[#0D1A15] p-6 text-left text-white shadow-soft transition-[transform,translate,scale,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:shadow-lift active:translate-y-0 active:scale-[0.99] motion-reduce:hover:-translate-y-0 sm:min-h-[260px] sm:p-7 md:min-h-[296px] md:p-8 lg:min-h-[324px] lg:p-10 ${FOCUS_RING} ${REDUCED_MOTION_RESET} ${c.borderTone}`}
         >
           {/* Contextual background photograph */}
           <img
@@ -113,7 +114,11 @@ function ModePage() {
     <div className="min-h-screen px-5 py-6 sm:px-8 md:py-10">
       <div className="mx-auto w-full max-w-[1040px]">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/70 pb-5">
-          <Link to="/" aria-label="GAW — Grab a Work welcome page" className="inline-flex shrink-0">
+          <Link
+            to="/"
+            aria-label="GAW — Grab a Work welcome page"
+            className={`inline-flex shrink-0 rounded-xl transition-opacity duration-150 hover:opacity-85 ${FOCUS_RING}`}
+          >
             <HeaderBrand size="md" />
           </Link>
           <div className="flex items-center gap-2.5">

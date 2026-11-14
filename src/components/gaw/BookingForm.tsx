@@ -179,8 +179,10 @@ export function BookingForm({
             <label
               key={v}
               className={cn(
-                "flex h-11 cursor-pointer items-center justify-center rounded-xl border text-sm font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
-                d.budgetMode === v ? "border-primary bg-secondary text-secondary-foreground" : "bg-card text-muted-foreground",
+                "flex h-11 cursor-pointer items-center justify-center rounded-xl border text-sm font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-160 ease-out active:scale-[0.98] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100",
+                d.budgetMode === v
+                  ? "border-primary bg-secondary text-secondary-foreground shadow-xs ring-1 ring-inset ring-primary/25"
+                  : "bg-card text-muted-foreground hover:border-hover-border hover:bg-hover-surface hover:text-foreground",
               )}
             >
               <input

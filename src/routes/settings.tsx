@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { AppLayout, BackButton } from "@/components/gaw/AppLayout";
 import { GAWBrand, GAWWordmark } from "@/components/gaw/GAWBrand";
+import { selectableOptionCardClass } from "@/components/gaw/interactions";
 import { Avatar } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import { identityVerified, useGaw } from "@/lib/gaw/store";
@@ -111,18 +112,18 @@ function SettingsBody() {
                   setPref(opt.key);
                   toast.success(`Theme set to ${opt.title}`);
                 }}
-                className={cn(
-                  "flex cursor-pointer flex-col items-start justify-between rounded-2xl border p-4 text-left transition-all",
-                  active
-                    ? "border-primary bg-secondary/50 shadow-soft ring-2 ring-primary/25"
-                    : "bg-card hover:border-primary/50",
+                className={selectableOptionCardClass(
+                  active,
+                  "flex flex-col items-start justify-between rounded-2xl border p-4 text-left",
                 )}
               >
                 <div className="flex w-full items-center justify-between">
                   <span
                     className={cn(
-                      "grid size-10 place-items-center rounded-xl",
-                      active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                      "grid size-10 place-items-center rounded-xl transition-[background-color,color,transform] duration-150",
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground group-hover:scale-105 group-hover:bg-hover-surface group-hover:text-primary motion-reduce:group-hover:scale-100",
                     )}
                   >
                     <Icon className="size-5" aria-hidden />

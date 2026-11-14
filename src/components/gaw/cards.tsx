@@ -1,20 +1,24 @@
 import { Link } from "@tanstack/react-router";
 import { Briefcase, Clock, MapPin, Star, Zap } from "lucide-react";
+import { interactiveEntityCardClass } from "./interactions";
 import { Avatar, AvailabilityBadge, PriceDisplay, SkillChip } from "./primitives";
 import { Button } from "@/components/ui/button";
 import { barangayName, type Job } from "@/lib/gaw/data";
 import type { WorkerWithDistance } from "@/lib/gaw/filter";
 import { formatPeso } from "@/lib/gaw/store";
+import { cn } from "@/lib/utils";
 
 export function WorkerCard({ worker }: { worker: WorkerWithDistance }) {
   return (
-    <article className="group animate-fade-up flex flex-col justify-between rounded-2xl border bg-card p-4 shadow-soft transition-all hover:border-primary/45 hover:shadow-lift md:p-5">
+    <article className={cn(interactiveEntityCardClass, "flex flex-col justify-between")}>
       <div className="flex gap-3.5">
         <Avatar initials={worker.initials} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-base font-extrabold tracking-tight text-foreground">{worker.name}</h3>
+              <h3 className="truncate text-base font-extrabold tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary">
+                {worker.name}
+              </h3>
               <p className="text-sm font-semibold text-primary">{worker.skill}</p>
             </div>
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gold/12 px-2.5 py-0.5 text-xs font-extrabold text-foreground ring-1 ring-inset ring-gold/30">
@@ -44,8 +48,18 @@ export function WorkerCard({ worker }: { worker: WorkerWithDistance }) {
       </div>
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/80 pt-3.5">
         <PriceDisplay formattedRate={worker.rate ? formatPeso(worker.rate) : null} />
-        <Button asChild size="sm" variant="soft">
-          <Link to="/workers/$id" params={{ id: worker.id }} aria-label={`View profile of ${worker.name}`}>
+        <Button
+          asChild
+          size="sm"
+          variant="soft"
+          className="group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-soft"
+        >
+          <Link
+            to="/workers/$id"
+            params={{ id: worker.id }}
+            aria-label={`View profile of ${worker.name}`}
+            className="after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+          >
             View Profile
           </Link>
         </Button>
@@ -56,7 +70,7 @@ export function WorkerCard({ worker }: { worker: WorkerWithDistance }) {
 
 export function JobCard({ job, applied }: { job: Job; applied?: boolean }) {
   return (
-    <article className="animate-fade-up rounded-2xl border bg-card p-4 shadow-soft transition-all hover:border-primary/45 hover:shadow-lift md:p-5">
+    <article className={interactiveEntityCardClass}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-1.5 flex flex-wrap items-center gap-2">
@@ -69,7 +83,9 @@ export function JobCard({ job, applied }: { job: Job; applied?: boolean }) {
               </span>
             )}
           </div>
-          <h3 className="text-base font-extrabold leading-snug tracking-tight text-foreground">{job.title}</h3>
+          <h3 className="text-base font-extrabold leading-snug tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary">
+            {job.title}
+          </h3>
           <p className="mt-0.5 text-sm text-muted-foreground">{job.poster}</p>
         </div>
         <p className="shrink-0 text-right text-sm font-extrabold text-foreground">{job.budget}</p>
@@ -91,8 +107,22 @@ export function JobCard({ job, applied }: { job: Job; applied?: boolean }) {
         ) : (
           <span className="text-sm text-muted-foreground">Open for applications</span>
         )}
-        <Button asChild size="sm" variant={applied ? "outline" : "default"}>
-          <Link to="/jobs/$id" params={{ id: job.id }} aria-label={`View job: ${job.title}`}>
+        <Button
+          asChild
+          size="sm"
+          variant={applied ? "outline" : "default"}
+          className={
+            applied
+              ? "group-hover:border-hover-border group-hover:bg-hover-surface group-hover:text-foreground"
+              : "group-hover:brightness-[1.06] group-hover:shadow-soft"
+          }
+        >
+          <Link
+            to="/jobs/$id"
+            params={{ id: job.id }}
+            aria-label={`View job: ${job.title}`}
+            className="after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+          >
             View Job
           </Link>
         </Button>

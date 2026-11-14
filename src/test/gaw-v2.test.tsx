@@ -1,9 +1,29 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { validateAuth } from "@/components/gaw/AuthForm";
 import { validateBooking } from "@/components/gaw/BookingForm";
 import { GAWBrand, GAWWordmark } from "@/components/gaw/GAWBrand";
 import { getConfiguredCartoKey, MapToolbar, resolveMapTileConfig } from "@/components/gaw/GawMap";
+import {
+  filterTabPillClass,
+  FOCUS_RING,
+  FOCUS_RING_INSET,
+  iconActionButtonClass,
+  interactiveEntityCardClass,
+  interactiveNavCardClass,
+  REDUCED_MOTION_RESET,
+  segmentedOptionClass,
+  selectableOptionCardClass,
+  subtleArrowIconClass,
+  subtleLinkClass,
+} from "@/components/gaw/interactions";
 import { AvailabilityBadge, HeaderBrand, PriceDisplay, SkillChip } from "@/components/gaw/primitives";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuHighlightGroup,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import {
   allowedActions,
   applyAction,
@@ -339,6 +359,64 @@ describe("GAW V2 Feature & Functionality Suite", () => {
           onRefresh: () => {},
         }),
       ).toBeTruthy();
+    });
+  });
+
+  describe("8. Interactive Feedback, Focus & Reduced-Motion Utilities", () => {
+    it("generates consistent pointer, focus-visible, reduced-motion, and variant classes", () => {
+      expect(FOCUS_RING).toContain("focus-visible:ring-2");
+      expect(FOCUS_RING_INSET).toContain("focus-visible:ring-inset");
+      expect(REDUCED_MOTION_RESET).toContain("motion-reduce:transition-none");
+
+      const segInactive = segmentedOptionClass(false, "card");
+      expect(segInactive).toContain("cursor-pointer");
+      expect(segInactive).toContain("hover:bg-hover-surface");
+      expect(segInactive).toContain("disabled:cursor-not-allowed");
+
+      const segDeep = segmentedOptionClass(true, "deep");
+      expect(segDeep).toContain("bg-deep");
+      expect(segDeep).toContain("text-deep-foreground");
+
+      const segPrimary = segmentedOptionClass(true, "primary");
+      expect(segPrimary).toContain("bg-primary");
+      expect(segPrimary).toContain("text-primary-foreground");
+
+      const pillActive = filterTabPillClass(true);
+      const pillInactive = filterTabPillClass(false);
+      expect(pillActive).toContain("bg-deep");
+      expect(pillInactive).toContain("hover:border-hover-border");
+      expect(pillInactive).toContain("hover:bg-hover-surface");
+
+      const optionActive = selectableOptionCardClass(true);
+      const optionInactive = selectableOptionCardClass(false);
+      expect(optionActive).toContain("ring-primary/25");
+      expect(optionInactive).toContain("hover:border-hover-border");
+
+      const iconDefault = iconActionButtonClass("default");
+      const iconDanger = iconActionButtonClass("destructive");
+      expect(iconDefault).toContain("hover:bg-hover-surface");
+      expect(iconDanger).toContain("hover:bg-danger-hover-surface");
+      expect(iconDanger).toContain("hover:text-destructive");
+
+      expect(interactiveNavCardClass).toContain("hover:border-hover-border");
+      expect(interactiveEntityCardClass).toContain("has-[a:focus-visible]:ring-2");
+      expect(subtleLinkClass).toContain("hover:underline");
+      expect(subtleArrowIconClass).toContain("group-hover:translate-x-1");
+    });
+
+    it("renders DropdownMenuHighlightGroup SSR-safely and exports themed dropdown primitives", () => {
+      expect(typeof DropdownMenu).toBe("function");
+      expect(DropdownMenuContent).toBeTruthy();
+      expect(typeof DropdownMenuHighlightGroup).toBe("function");
+      expect(DropdownMenuItem).toBeTruthy();
+
+      const html = renderToStaticMarkup(
+        <DropdownMenuHighlightGroup>
+          <span>Verification Center</span>
+        </DropdownMenuHighlightGroup>,
+      );
+      expect(html).toContain("Verification Center");
+      expect(html).toContain('aria-hidden="true"');
     });
   });
 });

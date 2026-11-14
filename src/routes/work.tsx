@@ -13,6 +13,11 @@ import {
 import { toast } from "sonner";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { JobCard } from "@/components/gaw/cards";
+import {
+  interactiveNavCardClass,
+  subtleArrowIconClass,
+  subtleLinkClass,
+} from "@/components/gaw/interactions";
 import { ProfileSetup } from "@/components/gaw/ProfileSetup";
 import { Avatar, EmptyState, SectionHeader, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
@@ -20,6 +25,7 @@ import { Switch } from "@/components/ui/switch";
 import { barangayName, JOBS } from "@/lib/gaw/data";
 import { identityVerified, useGaw } from "@/lib/gaw/store";
 import { VERIF_LABEL, VERIF_NEXT } from "@/lib/gaw/verification";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/work")({
   head: () => ({
@@ -200,8 +206,8 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             <SectionHeader
               title="Nearby jobs"
               action={
-                <Link to="/jobs" className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                  Find jobs <ArrowRight className="size-4" aria-hidden />
+                <Link to="/jobs" className={subtleLinkClass}>
+                  Find jobs <ArrowRight className={subtleArrowIconClass} aria-hidden />
                 </Link>
               }
             />
@@ -218,7 +224,7 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             <SectionHeader
               title="Incoming requests"
               action={
-                <Link to="/my-jobs" search={{ tab: "pending" }} className="text-xs font-semibold text-primary">
+                <Link to="/my-jobs" search={{ tab: "pending" }} className={cn(subtleLinkClass, "text-xs")}>
                   Manage in My Jobs →
                 </Link>
               }
@@ -233,11 +239,16 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
                     <Link
                       to="/requests/$id"
                       params={{ id: r.id }}
-                      className="flex items-center gap-3 rounded-2xl border bg-card p-3.5 shadow-soft transition-all hover:border-primary"
+                      className={cn(
+                        "flex items-center gap-3 rounded-2xl border bg-card p-3.5 shadow-soft",
+                        interactiveNavCardClass,
+                      )}
                     >
                       <Avatar initials={r.client.initials} size="sm" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold">{r.service}</p>
+                        <p className="truncate text-sm font-bold transition-colors duration-150 group-hover:text-primary">
+                          {r.service}
+                        </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {r.client.name} · {r.date}, {r.time}
                         </p>
@@ -260,7 +271,7 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             <SectionHeader
               title="My Jobs"
               action={
-                <Link to="/my-jobs" className="text-sm font-semibold text-primary">
+                <Link to="/my-jobs" className={subtleLinkClass}>
                   View all
                 </Link>
               }
@@ -281,7 +292,7 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
               </p>
               <p className="mt-2 text-3xl font-extrabold text-foreground">₱18,450</p>
               <p className="text-sm">This month · up 12% vs last month in {barangayName(p.barangayId)}</p>
-              <Link to="/pro" className="mt-2 inline-block text-xs font-bold underline">
+              <Link to="/pro" className={cn(subtleLinkClass, "mt-2 text-xs font-bold text-inherit underline hover:text-foreground")}>
                 Manage Worker Pro →
               </Link>
             </section>

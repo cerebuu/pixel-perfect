@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { GAWBrand } from "@/components/gaw/GAWBrand";
+import { selectableOptionCardClass } from "@/components/gaw/interactions";
 import { Button } from "@/components/ui/button";
 import { hasPlan, useGaw, type ProPlan } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
@@ -185,11 +186,9 @@ function ProSubscriptionExperience() {
               role="tab"
               aria-selected={active}
               onClick={() => handleSelectPlan(p)}
-              className={cn(
-                "flex cursor-pointer flex-col items-start justify-between rounded-3xl border p-4 text-left transition-all md:p-5",
-                active
-                  ? "border-primary bg-card shadow-lift ring-2 ring-primary/25"
-                  : "bg-card/70 text-muted-foreground hover:border-primary/50 hover:text-foreground",
+              className={selectableOptionCardClass(
+                active,
+                "flex flex-col items-start justify-between rounded-3xl border p-4 text-left md:p-5",
               )}
             >
               <div className="flex w-full items-center justify-between gap-2">

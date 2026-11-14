@@ -32,12 +32,25 @@ const DEFAULT_SIZE_BY_VARIANT: Record<GAWBrandVariant, GAWBrandSize> = {
   expanded: "lg",
 };
 
-const ICON_DIMENSIONS: Record<GAWBrandSize, { px: number; boxClass: string; radiusClass: string }> = {
-  sm: { px: 34, boxClass: "size-[34px]", radiusClass: "rounded-[9px]" },
-  md: { px: 40, boxClass: "size-10", radiusClass: "rounded-[11px]" },
-  lg: { px: 52, boxClass: "size-[52px]", radiusClass: "rounded-[14px]" },
-  xl: { px: 60, boxClass: "size-[60px]", radiusClass: "rounded-[16px]" },
-};
+const ICON_DIMENSIONS: Record<GAWBrandSize, { px: number; boxClass: string; radiusClass: string }> =
+  {
+    sm: {
+      px: 42,
+      boxClass: "size-9 sm:size-10 md:size-[42px]",
+      radiusClass: "rounded-[10px] sm:rounded-[11px]",
+    },
+    md: { px: 44, boxClass: "size-10 sm:size-11", radiusClass: "rounded-[11px] sm:rounded-[12px]" },
+    lg: {
+      px: 52,
+      boxClass: "size-12 sm:size-[52px]",
+      radiusClass: "rounded-[13px] sm:rounded-[14px]",
+    },
+    xl: {
+      px: 60,
+      boxClass: "size-[54px] sm:size-[60px]",
+      radiusClass: "rounded-[14px] sm:rounded-[16px]",
+    },
+  };
 
 const TITLE_CLASSES: Record<GAWBrandSize, string> = {
   sm: "text-[1.2rem] leading-none tracking-[-0.03em]",
@@ -83,7 +96,7 @@ export function GAWBrand({
         dim.radiusClass,
         onDeep
           ? "ring-1 ring-white/20 shadow-[0_2px_10px_rgba(0,0,0,0.28)]"
-          : "ring-1 ring-black/8 dark:ring-white/18 shadow-[0_1px_4px_rgba(18,60,57,0.14)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+          : "ring-1 ring-black/10 dark:ring-white/20 shadow-[0_1px_4px_rgba(18,60,57,0.14)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
       )}
     >
       <img

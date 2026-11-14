@@ -4,19 +4,51 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { GAWBrand } from "../components/gaw/GAWBrand";
-import { GawProvider } from "../lib/gaw/store";
-import { ThemeProvider, THEME_BOOT_SCRIPT } from "../lib/gaw/theme";
+import { GAWStartupScreen, StartupOverlayContext } from "../components/gaw/GAWStartupScreen";
+import { GawProvider, useGaw } from "../lib/gaw/store";
+import { ThemeProvider, THEME_BOOT_SCRIPT, useTheme } from "../lib/gaw/theme";
 import { I18nProvider, LOCALE_BOOT_SCRIPT, useI18n } from "../lib/gaw/i18n";
 import { Toaster } from "../components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+
+const PROTECTED_PATH_PREFIXES = [
+  "/mode",
+  "/hire",
+  "/find",
+  "/gigs",
+  "/bookings",
+  "/work",
+  "/jobs",
+  "/my-jobs",
+  "/pro",
+  "/verify",
+  "/settings",
+  "/requests",
+  "/workers",
+  "/book",
+] as const;
+
+function isProtectedPath(pathname: string): boolean {
+  return PROTECTED_PATH_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+/**
+ * Lightweight pre-hydration watchdog running before client bundles mount:
+ * if a core JS/CSS startup asset fails or React never hydrates within 7.5s,
+ * presents a theme-accurate Reload recovery prompt instead of leaving a stuck page.
+ */
+const BOOT_WATCHDOG_SCRIPT = `(function(){try{var shown=false;function cleanup(){window.removeEventListener("error",onErr,true);if(timer)clearTimeout(timer);}function showFallback(){if(shown||window.__GAW_MOUNTED__)return;shown=true;cleanup();if(!document.body)return;var d=document.documentElement.classList.contains("dark");var card=document.createElement("div");card.id="gaw-preboot-recovery";card.setAttribute("role","alert");card.style.cssText="position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:"+(d?"#0D1512":"#F7F9F5")+";color:"+(d?"#F3F7F4":"#172B27");card.innerHTML='<div style="max-width:360px;width:100%;border-radius:20px;padding:24px;text-align:center;border:1px solid '+(d?"#34483A":"rgba(18,60,57,0.16)")+';background:'+(d?"#192820":"#FFFFFF")+';"><p style="margin:0 0 8px;font-size:18px;font-weight:800;">Unable to load GAW</p><p style="margin:0 0 18px;font-size:13px;line-height:1.5;color:'+(d?"#B5C8BC":"#61736C")+';">A required startup file could not finish loading. Check your connection and try again.</p><button type="button" style="cursor:pointer;border:0;border-radius:12px;padding:10px 18px;font-size:14px;font-weight:700;background:#0E7048;color:#FFFFFF;" onclick="window.location.reload()">Try Again</button></div>';document.body.appendChild(card);}function onErr(e){if(window.__GAW_MOUNTED__)return;var t=e&&e.target;if(t&&(t.tagName==="SCRIPT"||(t.tagName==="LINK"&&t.getAttribute("rel")==="stylesheet"))){showFallback();}}window.addEventListener("error",onErr,true);var timer=setTimeout(showFallback,7500);window.__GAW_BOOT_WATCHDOG_CANCEL__=cleanup;}catch(e){}})();`;
 
 function NotFoundComponent() {
   const { tx } = useI18n();
@@ -101,7 +133,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // twitter:image here: every page without its own would inherit the root's preview image.
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "GAW — Grab a Work | Local Work. Nearby Opportunities." },
       {
         name: "description",
@@ -142,7 +174,11 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en-PH" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT + LOCALE_BOOT_SCRIPT }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: THEME_BOOT_SCRIPT + LOCALE_BOOT_SCRIPT + BOOT_WATCHDOG_SCRIPT,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
@@ -150,6 +186,82 @@ function RootShell({ children }: { children: ReactNode }) {
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function RootStartupShell({ children }: { children: ReactNode }) {
+  const theme = useTheme();
+  const i18n = useI18n();
+  const gaw = useGaw();
+  const router = useRouter();
+  const { status: routerStatus, pathname } = useRouterState({
+    select: (s) => ({ status: s.status, pathname: s.location.pathname }),
+  });
+
+  // One-way per page session: once startup screen completes dismissal, never re-show on
+  // internal client navigations.
+  const dismissedRef = useRef(false);
+  const [bootDismissed, setBootDismissed] = useState(false);
+  const [redirectTimedOut, setRedirectTimedOut] = useState(false);
+
+  useEffect(() => {
+    const win = window as Window & {
+      __GAW_MOUNTED__?: boolean;
+      __GAW_BOOT_WATCHDOG_CANCEL__?: () => void;
+    };
+    win.__GAW_MOUNTED__ = true;
+    win.__GAW_BOOT_WATCHDOG_CANCEL__?.();
+    document.getElementById("gaw-preboot-recovery")?.remove();
+  }, []);
+
+  const awaitingAuthRedirect =
+    !bootDismissed && gaw.hydrated && !gaw.signedIn && isProtectedPath(pathname);
+
+  // Brief cap so interrupted/non-redirecting auth navigations still dismiss cleanly.
+  useEffect(() => {
+    if (!awaitingAuthRedirect || redirectTimedOut) return;
+    const t = window.setTimeout(() => setRedirectTimedOut(true), 350);
+    return () => window.clearTimeout(t);
+  }, [awaitingAuthRedirect, redirectTimedOut]);
+
+  const essentialReady =
+    theme.ready &&
+    i18n.ready &&
+    gaw.hydrated &&
+    routerStatus !== "pending" &&
+    (!awaitingAuthRedirect || redirectTimedOut);
+
+  const handleBootComplete = useCallback(() => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    setBootDismissed(true);
+    if (typeof document !== "undefined") {
+      document.documentElement.dataset["gawBooted"] = "true";
+    }
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    setRedirectTimedOut(false);
+    void router.invalidate();
+  }, [router]);
+
+  const handleRecoveryReset = useCallback(() => {
+    gaw.resetDemo();
+    void router.navigate({ to: "/" });
+  }, [gaw, router]);
+
+  return (
+    <StartupOverlayContext.Provider value={!bootDismissed}>
+      {children}
+      {!bootDismissed && (
+        <GAWStartupScreen
+          essentialReady={essentialReady}
+          onComplete={handleBootComplete}
+          onRetry={handleRetry}
+          onRecoveryReset={handleRecoveryReset}
+        />
+      )}
+    </StartupOverlayContext.Provider>
   );
 }
 
@@ -162,8 +274,10 @@ function RootComponent() {
       <ThemeProvider>
         <I18nProvider>
           <GawProvider>
-            <Outlet />
-            <Toaster position="top-center" richColors closeButton />
+            <RootStartupShell>
+              <Outlet />
+              <Toaster position="top-center" richColors closeButton />
+            </RootStartupShell>
           </GawProvider>
         </I18nProvider>
       </ThemeProvider>

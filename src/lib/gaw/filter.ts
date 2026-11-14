@@ -58,12 +58,61 @@ export interface JobFilters {
   query: string;
 }
 
+export type JobSortBy = "nearest" | "pay" | "urgent";
+
+export type JobWithDistance = Job & { distance: number };
+
+export interface JobDiscoveryFilters extends JobFilters {
+  origin: LatLng;
+  radiusKm?: number | undefined;
+  urgentOnly?: boolean;
+  sortBy?: JobSortBy;
+}
+
+function matchesJobFilters(j: Job, f: JobFilters, q: string) {
+  return (
+    (f.category === "all" || offersService({ skill: j.category, skills: [] }, f.category)) &&
+    (f.barangayId === "all" || j.barangayId === f.barangayId) &&
+    (!q ||
+      `${j.title} ${j.description} ${j.poster} ${j.category} ${j.landmark ?? ""} ${barangayName(j.barangayId)}`
+        .toLowerCase()
+        .includes(q))
+  );
+}
+
 export function filterJobs(jobs: Job[], f: JobFilters): Job[] {
   const q = f.query.trim().toLowerCase();
-  return jobs.filter(
-    (j) =>
-      (f.category === "all" || offersService({ skill: j.category, skills: [] }, f.category)) &&
-      (f.barangayId === "all" || j.barangayId === f.barangayId) &&
-      (!q || `${j.title} ${j.description} ${j.poster} ${j.category}`.toLowerCase().includes(q)),
-  );
+  return jobs.filter((j) => matchesJobFilters(j, f, q));
+}
+
+export function filterAndSortJobs(jobs: Job[], f: JobDiscoveryFilters): JobWithDistance[] {
+  const q = f.query.trim().toLowerCase();
+  const sortBy = f.sortBy ?? "nearest";
+
+  return jobs
+    .map((j) => {
+      const rawDist = distanceKm(f.origin, j);
+      return { j, rawDist, distance: roundKm(rawDist) };
+    })
+    .filter(({ j, rawDist }) => {
+      if (f.radiusKm !== undefined && rawDist > f.radiusKm) return false;
+      if (f.urgentOnly && !j.urgent) return false;
+      return matchesJobFilters(j, f, q);
+    })
+    .sort((a, b) => {
+      if (sortBy === "pay") {
+        const payA = a.j.budgetNum ?? a.j.aiRecommendedPhp ?? 0;
+        const payB = b.j.budgetNum ?? b.j.aiRecommendedPhp ?? 0;
+        return payB - payA || a.rawDist - b.rawDist;
+      }
+      if (sortBy === "urgent") {
+        return Number(!!b.j.urgent) - Number(!!a.j.urgent) || a.rawDist - b.rawDist;
+      }
+      return (
+        a.rawDist - b.rawDist ||
+        Number(!!b.j.urgent) - Number(!!a.j.urgent) ||
+        (b.j.budgetNum ?? b.j.aiRecommendedPhp ?? 0) - (a.j.budgetNum ?? a.j.aiRecommendedPhp ?? 0)
+      );
+    })
+    .map(({ j, distance }) => ({ ...j, distance }));
 }

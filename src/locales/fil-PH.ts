@@ -285,6 +285,7 @@ export const filPH: TranslationDictionary = {
     tabPending: "Naka-pending",
     tabActive: "Aktibo",
     tabApplications: "Aplikasyon",
+    tabSaved: "Naka-save",
     tabCompleted: "Tapos na",
     tabCancelled: "Kinansela",
     tabHistory: "Kasaysayan",

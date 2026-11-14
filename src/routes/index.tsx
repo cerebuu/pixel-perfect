@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GAWBrand, GAWWordmark } from "@/components/gaw/GAWBrand";
-import { LanguageSelector, useI18n } from "@/lib/gaw/i18n";
+import { useI18n } from "@/lib/gaw/i18n";
 import { useGaw } from "@/lib/gaw/store";
 import welcome from "@/assets/gaw-welcome.jpg";
 
@@ -37,8 +37,12 @@ function Welcome() {
   const resume = hydrated && signedIn;
 
   return (
-    <div className="min-h-screen bg-contour text-deep-foreground">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1460px] items-center gap-8 px-5 py-8 sm:px-8 md:py-12 lg:grid-cols-[minmax(0,0.47fr)_minmax(0,0.53fr)] lg:gap-10 lg:px-12 xl:gap-12 xl:px-14">
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="min-h-screen bg-contour text-deep-foreground outline-none"
+    >
+      <div className="mx-auto grid min-h-screen w-full max-w-[1460px] items-center gap-7 px-5 py-6 sm:gap-8 sm:px-8 sm:py-8 md:py-10 lg:grid-cols-[minmax(0,0.47fr)_minmax(0,0.53fr)] lg:gap-10 lg:px-12 lg:py-10 xl:gap-14 xl:px-14">
         {/* Right Column on Desktop: Prominent Davao Landmarks Hero Card */}
         <figure className="relative w-full overflow-hidden rounded-3xl bg-[#0A1E1C] shadow-lift ring-1 ring-white/15 lg:order-2 lg:rounded-[2.25rem]">
           {/* Non-destructive CSS crop (scale-[1.105] inside overflow-hidden) trims the outer patterned frame while preserving all Davao landmarks */}
@@ -77,13 +81,12 @@ function Welcome() {
         </figure>
 
         {/* Left Column on Desktop: Brand Identity, Headline, Description, CTAs & Highlights */}
-        <div className="relative flex flex-col justify-center pb-4 pt-1 lg:py-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="relative flex flex-col justify-center pb-2 lg:py-4">
+          <header className="flex items-center">
             <GAWBrand variant="expanded" size="xl" onDeep />
-            <LanguageSelector variant="onDeep" />
-          </div>
+          </header>
 
-          <p className="mt-7 text-[clamp(0.875rem,1.15vw,1.125rem)] font-extrabold uppercase tracking-[0.18em] text-gold lg:mt-8">
+          <p className="mt-7 text-[clamp(0.75rem,0.95vw,0.9375rem)] font-bold uppercase tracking-[0.12em] text-gold sm:mt-8 lg:mt-9">
             {tx(
               "Local Work. Nearby Opportunities.",
               "Lokal na Serbisyo. Trabahong Malapit sa Iyo.",
@@ -91,7 +94,7 @@ function Welcome() {
             )}
           </p>
 
-          <h1 className="mt-3.5 text-[clamp(2.5rem,4.6vw,4.65rem)] font-extrabold leading-[1.04] tracking-[-0.03em] text-deep-foreground">
+          <h1 className="mt-3 text-balance text-[clamp(2.125rem,3.9vw,3.75rem)] font-extrabold leading-[1.08] tracking-[-0.025em] text-deep-foreground sm:mt-3.5">
             {tx(
               "Find Local Talent. Discover Nearby Work.",
               "Maghanap ng Manggagawa. Tuklasin ang Trabaho sa Malapit.",
@@ -99,7 +102,7 @@ function Welcome() {
             )}
           </h1>
 
-          <p className="mt-5 max-w-[35rem] text-[clamp(1.0625rem,1.45vw,1.4rem)] leading-[1.55] text-deep-muted">
+          <p className="mt-4 max-w-[33rem] text-[clamp(0.95rem,1.15vw,1.125rem)] leading-[1.6] text-deep-muted sm:mt-5">
             {tx(
               "Trusted plumbers, electricians, cleaners and more — right in your barangay. Or find your next job close to home.",
               "Maaasahang tubero, electrician, tagalinis at iba pa — mismo sa iyong barangay. O hanapin ang susunod mong trabaho malapit sa bahay.",
@@ -107,7 +110,7 @@ function Welcome() {
             )}
           </p>
 
-          <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center lg:mt-9">
+          <div className="mt-7 flex flex-col gap-3.5 sm:mt-8 sm:flex-row sm:items-center">
             {resume ? (
               <Button
                 asChild
@@ -141,7 +144,7 @@ function Welcome() {
             )}
           </div>
 
-          <ul className="mt-9 grid grid-cols-1 gap-4 border-t border-white/12 pt-6 text-[0.9rem] font-medium leading-snug text-deep-foreground/90 sm:grid-cols-3 sm:gap-5 sm:text-[0.95rem] lg:mt-10 lg:pt-7 lg:text-[1.02rem]">
+          <ul className="mt-8 grid grid-cols-1 gap-4 border-t border-white/12 pt-6 text-[0.9rem] font-medium leading-snug text-deep-foreground/90 sm:grid-cols-3 sm:gap-5 sm:text-[0.95rem] lg:mt-9 lg:pt-7 lg:text-[1.02rem]">
             <li className="flex items-start gap-2.5 sm:flex-col sm:gap-2">
               <MapPin className="mt-0.5 size-6 shrink-0 text-gold sm:mt-0" aria-hidden />
               <span>
@@ -175,6 +178,6 @@ function Welcome() {
           </ul>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

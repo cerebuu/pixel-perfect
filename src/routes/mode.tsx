@@ -2,7 +2,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import roleFindWorkImg from "@/assets/role-find-work.jpg";
 import roleHireWorkerImg from "@/assets/role-hire-worker.jpg";
-import { AccountMenu, ThemeToggle, useRequireSignIn } from "@/components/gaw/AppLayout";
+import {
+  AccountMenu,
+  RouteLoadingFallback,
+  ThemeToggle,
+  useRequireSignIn,
+} from "@/components/gaw/AppLayout";
+import { useStartupOverlayActive } from "@/components/gaw/GAWStartupScreen";
 import { FOCUS_RING, REDUCED_MOTION_RESET } from "@/components/gaw/interactions";
 import { HeaderBrand } from "@/components/gaw/primitives";
 import { LanguageSelector, useI18n } from "@/lib/gaw/i18n";
@@ -113,10 +119,11 @@ function ModeSelector({ onPick }: { onPick: (m: Mode) => void }) {
 
 function ModePage() {
   const ready = useRequireSignIn();
+  const startupActive = useStartupOverlayActive();
   const { account, setMode } = useGaw();
-  const { tx } = useI18n();
+  const { t, tx } = useI18n();
   const navigate = useNavigate();
-  if (!ready) return null;
+  if (!ready) return startupActive ? null : <RouteLoadingFallback />;
 
   const pick = (m: Mode) => {
     setMode(m);
@@ -125,6 +132,12 @@ function ModePage() {
 
   return (
     <div className="min-h-screen px-5 py-6 sm:px-8 md:py-10">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        {t("common.skipToContent")}
+      </a>
       <div className="mx-auto w-full max-w-[1040px]">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border/70 pb-5">
           <Link
@@ -141,7 +154,11 @@ function ModePage() {
           </div>
         </header>
 
-        <main className="mt-10 pb-12 sm:mt-12 md:mt-14 lg:mt-16">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mt-10 pb-12 outline-none sm:mt-12 md:mt-14 lg:mt-16"
+        >
           <p className="text-[1.0625rem] font-medium text-muted-foreground sm:text-[1.125rem] md:text-[1.2rem]">
             {tx("Hi", "Kumusta", "Maayong adlaw")} {account?.name.split(" ")[0]} 👋
           </p>

@@ -279,6 +279,7 @@ export const enPH = {
     tabPending: "Pending",
     tabActive: "Active",
     tabApplications: "Applications",
+    tabSaved: "Saved",
     tabCompleted: "Completed",
     tabCancelled: "Cancelled",
     tabHistory: "History",

@@ -17,6 +17,7 @@ describe("App routing", () => {
       "/mode",
       "/hire",
       "/find",
+      "/gigs",
       "/bookings",
       "/work",
       "/jobs",

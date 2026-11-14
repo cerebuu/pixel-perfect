@@ -6,7 +6,7 @@ import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type MenuItemTone = "default" | "warning" | "destructive";
+export type MenuItemTone = "default" | "warning" | "destructive" | "premium";
 
 interface HighlightRect {
   top: number;
@@ -37,6 +37,7 @@ const GLIDER_TONE_CLASS: Record<MenuItemTone, string> = {
   default: "bg-hover-surface border-hover-border",
   warning: "bg-warning-hover-surface border-warning-hover-border",
   destructive: "bg-danger-hover-surface border-danger-hover-border",
+  premium: "bg-transparent border-transparent",
 };
 
 /**
@@ -109,7 +110,7 @@ function DropdownMenuHighlightGroup({
         style={{
           transform: `translate3d(0, ${rect.top}px, 0)`,
           height: `${rect.height}px`,
-          opacity: rect.visible ? 1 : 0,
+          opacity: rect.visible && rect.tone !== "premium" ? 1 : 0,
           transitionProperty: rect.animateMove
             ? "transform, height, opacity, background-color, border-color"
             : "opacity, background-color, border-color",
@@ -194,21 +195,57 @@ const DropdownMenuContent = React.forwardRef<
 ));
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
-const ITEM_TONE_CLASSES: Record<MenuItemTone, { base: string; standaloneBg: string }> = {
+const ITEM_TONE_CLASSES: Record<
+  MenuItemTone,
+  { base: string; standaloneBg: string; svgMotion: string }
+> = {
   default: {
     base: "text-popover-foreground/90 [&>svg]:text-muted-foreground hover:text-foreground data-[highlighted]:text-foreground dark:hover:text-white dark:data-[highlighted]:text-white hover:[&>svg]:text-primary data-[highlighted]:[&>svg]:text-primary",
     standaloneBg:
       "hover:bg-hover-surface focus:bg-hover-surface data-[highlighted]:bg-hover-surface",
+    svgMotion: "hover:[&>svg]:translate-x-[2.5px] data-[highlighted]:[&>svg]:translate-x-[2.5px]",
   },
   warning: {
     base: "text-popover-foreground/90 [&>svg]:text-warning/85 hover:text-warning data-[highlighted]:text-warning dark:hover:text-[#FBE2AE] dark:data-[highlighted]:text-[#FBE2AE] hover:[&>svg]:text-warning data-[highlighted]:[&>svg]:text-warning",
     standaloneBg:
       "hover:bg-warning-hover-surface focus:bg-warning-hover-surface data-[highlighted]:bg-warning-hover-surface",
+    svgMotion: "hover:[&>svg]:translate-x-[2.5px] data-[highlighted]:[&>svg]:translate-x-[2.5px]",
   },
   destructive: {
     base: "text-popover-foreground/90 [&>svg]:text-destructive/85 hover:text-destructive data-[highlighted]:text-destructive dark:hover:text-[#FFB3AD] dark:data-[highlighted]:text-[#FFB3AD] hover:[&>svg]:text-destructive data-[highlighted]:[&>svg]:text-destructive",
     standaloneBg:
       "hover:bg-danger-hover-surface focus:bg-danger-hover-surface data-[highlighted]:bg-danger-hover-surface",
+    svgMotion: "hover:[&>svg]:translate-x-[2.5px] data-[highlighted]:[&>svg]:translate-x-[2.5px]",
+  },
+  premium: {
+    base: [
+      "my-0.5 bg-premium-surface ring-1 ring-inset ring-premium-border font-semibold will-change-transform",
+      "text-foreground/95 dark:text-[#F8F6EE]",
+      "transition-[color,background-color,box-shadow,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+      "[&>svg]:duration-200 [&>svg]:ease-[cubic-bezier(0.22,1,0.36,1)]",
+      "hover:-translate-y-[1.5px] data-[highlighted]:-translate-y-[1.5px] focus-visible:-translate-y-[1.5px]",
+      "hover:bg-premium-hover-surface data-[highlighted]:bg-premium-hover-surface focus-visible:bg-premium-hover-surface",
+      "hover:text-foreground data-[highlighted]:text-foreground focus-visible:text-foreground dark:hover:text-white dark:data-[highlighted]:text-white dark:focus-visible:text-white",
+      "hover:ring-premium-hover-border data-[highlighted]:ring-premium-hover-border",
+      "hover:shadow-premium-hover data-[highlighted]:shadow-premium-hover focus-visible:shadow-premium-hover",
+      "focus-visible:ring-2 focus-visible:ring-premium-focus",
+      "active:translate-y-0 active:scale-[0.985] active:shadow-premium-active data-[highlighted]:active:translate-y-0 data-[highlighted]:active:shadow-premium-active",
+      "data-[active=true]:bg-premium-active-surface data-[active=true]:ring-premium-active-border data-[active=true]:shadow-premium-active",
+      "data-[disabled]:translate-y-0 data-[disabled]:shadow-none data-[disabled]:bg-premium-surface data-[disabled]:ring-premium-border",
+      "data-[disabled]:hover:[&>svg:first-of-type]:scale-100 data-[disabled]:[&>svg[data-trailing]]:translate-x-0",
+      "motion-reduce:hover:translate-y-0 motion-reduce:data-[highlighted]:translate-y-0 motion-reduce:focus-visible:translate-y-0",
+      "motion-reduce:hover:[&>svg:first-of-type]:scale-100 motion-reduce:data-[highlighted]:[&>svg:first-of-type]:scale-100 motion-reduce:focus-visible:[&>svg:first-of-type]:scale-100",
+      "motion-reduce:hover:[&>svg[data-trailing]]:translate-x-0 motion-reduce:data-[highlighted]:[&>svg[data-trailing]]:translate-x-0 motion-reduce:focus-visible:[&>svg[data-trailing]]:translate-x-0",
+      "[&>svg:first-of-type]:origin-center [&>svg:first-of-type]:text-premium-icon",
+      "hover:[&>svg:first-of-type]:text-premium-icon-hover data-[highlighted]:[&>svg:first-of-type]:text-premium-icon-hover focus-visible:[&>svg:first-of-type]:text-premium-icon-hover data-[active=true]:[&>svg:first-of-type]:text-premium-icon-hover",
+      "hover:[&>svg:first-of-type]:scale-[1.08] data-[highlighted]:[&>svg:first-of-type]:scale-[1.08] focus-visible:[&>svg:first-of-type]:scale-[1.08] active:[&>svg:first-of-type]:scale-100 data-[highlighted]:active:[&>svg:first-of-type]:scale-100",
+      "[&>svg[data-trailing]]:text-muted-foreground/75",
+      "hover:[&>svg[data-trailing]]:text-premium-icon data-[highlighted]:[&>svg[data-trailing]]:text-premium-icon focus-visible:[&>svg[data-trailing]]:text-premium-icon data-[active=true]:[&>svg[data-trailing]]:text-premium-icon",
+    ].join(" "),
+    standaloneBg:
+      "hover:bg-premium-hover-surface focus-visible:bg-premium-hover-surface data-[highlighted]:bg-premium-hover-surface",
+    svgMotion:
+      "hover:[&>svg[data-trailing]]:translate-x-[3.5px] data-[highlighted]:[&>svg[data-trailing]]:translate-x-[3.5px] focus-visible:[&>svg[data-trailing]]:translate-x-[3.5px]",
   },
 };
 
@@ -240,9 +277,10 @@ const DropdownMenuItem = React.forwardRef<
       }}
       className={cn(
         "group/item relative z-10 flex cursor-pointer select-none items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium outline-none transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring/85 focus-visible:ring-inset data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45 data-[disabled]:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100",
-        "[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:transition-[color,transform] [&>svg]:duration-160 [&>svg]:ease-[cubic-bezier(0.22,1,0.36,1)] hover:[&>svg]:translate-x-[2.5px] data-[highlighted]:[&>svg]:translate-x-[2.5px] data-[disabled]:[&>svg]:translate-x-0 motion-reduce:[&>svg]:transition-none motion-reduce:hover:[&>svg]:translate-x-0 motion-reduce:data-[highlighted]:[&>svg]:translate-x-0",
+        "[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:transition-[color,transform] [&>svg]:duration-180 [&>svg]:ease-[cubic-bezier(0.22,1,0.36,1)] data-[disabled]:[&>svg]:translate-x-0 motion-reduce:[&>svg]:transition-none motion-reduce:hover:[&>svg]:translate-x-0 motion-reduce:data-[highlighted]:[&>svg]:translate-x-0",
         toneStyle.base,
-        hasGlider ? "focus:bg-transparent" : toneStyle.standaloneBg,
+        toneStyle.svgMotion,
+        hasGlider && tone !== "premium" ? "focus:bg-transparent" : toneStyle.standaloneBg,
         inset && "pl-8",
         className,
       )}

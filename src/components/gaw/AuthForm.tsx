@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff, Info, Loader2, ShieldCheck } from "lucide-react";
 import { FOCUS_RING, iconActionButtonClass, subtleLinkClass } from "./interactions";
@@ -53,13 +53,25 @@ export function AuthForm({ kind }: { kind: Kind }) {
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const finishTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (finishTimerRef.current !== null) {
+        window.clearTimeout(finishTimerRef.current);
+      }
+    };
+  }, []);
 
   const set = (k: Exclude<keyof AuthValues, "terms">) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setV((s) => ({ ...s, [k]: e.target.value }));
 
   const finish = () => {
     setBusy(true);
-    setTimeout(() => navigate({ to: "/mode" }), 350);
+    if (finishTimerRef.current !== null) {
+      window.clearTimeout(finishTimerRef.current);
+    }
+    finishTimerRef.current = window.setTimeout(() => navigate({ to: "/mode" }), 350);
   };
 
   const onSubmit = (e: FormEvent) => {

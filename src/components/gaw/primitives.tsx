@@ -151,8 +151,22 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
   cancelled: "bg-muted text-muted-foreground",
 };
 
-export function StatusBadge({ status }: { status: BookingStatus }) {
+export function StatusBadge({
+  status,
+  hasOpenIssue = false,
+}: {
+  status: BookingStatus;
+  hasOpenIssue?: boolean;
+}) {
   const { tx } = useI18n();
+  if (hasOpenIssue) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-status-declined-bg px-2.5 py-1 text-xs font-semibold text-status-declined">
+        <span className="size-1.5 rounded-full bg-current" aria-hidden />
+        {tx("Issue Under Review", "May Isyu · Sinusuri", "Naay Isyu · Ginasusi")}
+      </span>
+    );
+  }
   const labels: Record<BookingStatus, string> = {
     pending: tx("Pending", "Naka-pending", "Naka-pending"),
     confirmed: tx("Confirmed", "Kumpirmado", "Kumpirmado"),

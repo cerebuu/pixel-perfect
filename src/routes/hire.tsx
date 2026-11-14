@@ -6,11 +6,13 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  ClipboardList,
   Crown,
   MapPin,
   Navigation,
+  Plus,
   Search,
-  ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { WorkerCard } from "@/components/gaw/cards";
@@ -23,14 +25,28 @@ import {
   subtleArrowIconClass,
   subtleLinkClass,
 } from "@/components/gaw/interactions";
+import { PostGigCard } from "@/components/gaw/PostGigCard";
 import { Avatar, LocationFilter, SectionHeader, StatusBadge } from "@/components/gaw/primitives";
+import { VerificationStatusBanner } from "@/components/gaw/VerificationStatusBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CATEGORIES, FEATURED_CATEGORIES, OTHER_CATEGORY, WORKERS } from "@/lib/gaw/data";
+import {
+  CATEGORIES,
+  FEATURED_CATEGORIES,
+  OTHER_CATEGORY,
+  WORKERS,
+  barangayName,
+} from "@/lib/gaw/data";
 import { filterWorkers } from "@/lib/gaw/filter";
 import { useI18n } from "@/lib/gaw/i18n";
 import { normalizeService, validateCustomService } from "@/lib/gaw/services";
-import { hiringOrigin, hiringOriginLabel, identityVerified, useGaw } from "@/lib/gaw/store";
+import {
+  bookingsFor,
+  hiringOrigin,
+  hiringOriginLabel,
+  identityVerified,
+  useGaw,
+} from "@/lib/gaw/store";
 
 export const Route = createFileRoute("/hire")({
   head: () => ({
@@ -62,9 +78,9 @@ function EmployerDashboard() {
   );
 }
 
-function DashboardBody() {
+export function DashboardBody() {
   const gaw = useGaw();
-  const { tx, translateCategory, verifLabel } = useI18n();
+  const { t, tx, translateCategory } = useI18n();
   const {
     account,
     locationId,
@@ -72,8 +88,11 @@ function DashboardBody() {
     serviceLocation,
     setServiceLocation,
     bookings,
+    applications,
     plans,
     verification,
+    customJobs,
+    removeJob,
   } = gaw;
 
   const navigate = useNavigate();
@@ -95,11 +114,11 @@ function DashboardBody() {
     availableOnly: false,
   }).slice(0, 4);
 
-  const count = (s: string) => bookings.filter((b) => b.status === s).length;
-  const latest = bookings[0];
+  const hiringBookings = bookingsFor(bookings, "hiring");
+  const count = (s: string) => hiringBookings.filter((b) => b.status === s).length;
+  const latest = hiringBookings[0];
   const latestWorker = latest && WORKERS.find((w) => w.id === latest.workerId);
   const verified = identityVerified(verification);
-  const idStatus = verification.identity?.status ?? "not_submitted";
 
   const onSearch = (e: FormEvent) => {
     e.preventDefault();
@@ -122,6 +141,7 @@ function DashboardBody() {
 
   return (
     <div className="space-y-8">
+      <VerificationStatusBanner role="hire" />
       <section className="relative overflow-hidden rounded-3xl bg-contour p-5 text-deep-foreground shadow-lift md:p-8">
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
@@ -218,6 +238,9 @@ function DashboardBody() {
           />
         </div>
       )}
+
+      {/* Post a Service Request — feeds /jobs, /work, /gigs, and /bookings */}
+      <PostGigCard showMyGigsLink />
 
       {/* Unlimited Service Categories Section */}
       <section aria-labelledby="cat-h">
@@ -413,37 +436,91 @@ function DashboardBody() {
             )}
           </section>
 
-          {/* Employer Verification Status Card */}
-          <section className="rounded-2xl border bg-card p-4 shadow-soft">
-            <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
-                <ShieldCheck className="size-4" aria-hidden />{" "}
-                {tx(
-                  "Employer Verification",
-                  "Beripikasyon ng Nagpapa-hire",
-                  "Beripikasyon sa Mag-hire",
-                )}
-              </span>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                {verifLabel(idStatus)}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {tx(
-                "Basic identity verification builds trust with local workers. No business license required.",
-                "Nagbibigay ng tiwala sa mga manggagawa ang basic identity verification. Hindi kailangan ng business license.",
-                "Makahatag og pagsalig sa mga trabahante ang basic identity verification. Dili kinahanglan og business license.",
-              )}
-            </p>
-            <Button asChild size="sm" variant="outline" className="mt-3 w-full">
-              <Link to="/verify">
-                {tx(
-                  "Open Verification Center",
-                  "Buksan ang Verification Center",
-                  "Ablihi ang Verification Center",
-                )}
-              </Link>
-            </Button>
+          <section className="rounded-2xl border bg-card p-5 shadow-soft">
+            <SectionHeader
+              title={t("hire.yourRequestsTitle")}
+              action={
+                <Link to="/gigs" className={subtleLinkClass}>
+                  {tx("Manage", "Pamahalaan", "Dumala")}
+                </Link>
+              }
+            />
+            <p className="-mt-2 mb-3 text-xs text-muted-foreground">{t("hire.yourRequestsSub")}</p>
+            {customJobs.length === 0 ? (
+              <div className="rounded-xl border border-dashed bg-muted/35 p-3.5 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+                  <ClipboardList className="size-4" aria-hidden />
+                  {tx(
+                    "No open requests yet.",
+                    "Wala pang nakapost na request.",
+                    "Wala pay na-post nga request.",
+                  )}
+                </p>
+                <Button asChild size="sm" variant="soft" className="mt-2.5">
+                  <Link to="/gigs">
+                    <Plus className="size-3.5" aria-hidden /> {t("hire.postRequestCta")}
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <ul className="space-y-2.5">
+                {customJobs.slice(0, 3).map((job) => {
+                  const matchingCount = WORKERS.filter(
+                    (w) =>
+                      job.category === OTHER_CATEGORY ||
+                      w.skill.toLowerCase() === job.category.toLowerCase() ||
+                      w.skills.some((s) => s.toLowerCase() === job.category.toLowerCase()),
+                  ).length;
+                  const proposalCount = applications.filter((a) => a.jobId === job.id).length;
+                  return (
+                    <li
+                      key={job.id}
+                      className="rounded-xl border bg-background/60 p-3 text-sm transition-colors hover:border-primary/40"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <Link
+                          to="/gigs"
+                          className="min-w-0 flex-1 font-semibold text-foreground hover:text-primary"
+                        >
+                          <span className="line-clamp-1">{job.title}</span>
+                        </Link>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-9 px-2.5"
+                          aria-label={tx(
+                            `Remove ${job.title}`,
+                            `Alisin ang ${job.title}`,
+                            `Kuhaa ang ${job.title}`,
+                          )}
+                          onClick={() => removeJob(job.id)}
+                        >
+                          <Trash2 className="size-3.5 text-muted-foreground" aria-hidden />
+                        </Button>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {translateCategory(job.category)} · {barangayName(job.barangayId)} ·{" "}
+                        <strong className="text-foreground">{job.budget}</strong>
+                      </p>
+                      <p className="mt-1 text-[11px] text-primary">
+                        {proposalCount > 0
+                          ? tx(
+                              `${proposalCount} proposal${proposalCount === 1 ? "" : "s"} · ${matchingCount} workers nearby`,
+                              `${proposalCount} aplikante · ${matchingCount} manggagawa`,
+                              `${proposalCount} aplikante · ${matchingCount} trabahante`,
+                            )
+                          : tx(
+                              `${matchingCount} matching worker${matchingCount === 1 ? "" : "s"} in Davao`,
+                              `${matchingCount} tugmang manggagawa sa Davao`,
+                              `${matchingCount} ka haom nga trabahante sa Davao`,
+                            )}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
 
           <Link

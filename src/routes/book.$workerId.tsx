@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, Loader2, Pencil, RotateCcw } from "lucide-react";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { BookingForm, formatTime, type BookingDraft } from "@/components/gaw/BookingForm";
+import { GAWConnectionMotif } from "@/components/gaw/GAWStartupScreen";
+import { SettlementPreviewCard } from "@/components/gaw/PricingGuide";
 import { Avatar, StatusBadge } from "@/components/gaw/primitives";
 import { VerificationGuardModal } from "@/components/gaw/VerificationCenter";
 import { Button } from "@/components/ui/button";
 import { barangayName, WORKERS, type Worker } from "@/lib/gaw/data";
+import { calculateMinimumWageFloor } from "@/lib/gaw/domain";
 import { useI18n } from "@/lib/gaw/i18n";
 import { canPerformProtectedAction, formatPeso, useGaw } from "@/lib/gaw/store";
 
@@ -54,7 +57,7 @@ function BookPage() {
 }
 
 function BookingFlow({ worker }: { worker: Worker }) {
-  const { account, locationId, serviceLocation, addBooking, verification } = useGaw();
+  const { account, locationId, serviceLocation, addBooking, verification, plans } = useGaw();
   const { locale, tx, translateCategory } = useI18n();
   const draftKey = `gaw:booking-draft:${account?.email ?? "anon"}:${worker.id}`;
 
@@ -74,6 +77,15 @@ function BookingFlow({ worker }: { worker: Worker }) {
   const [showVerifModal, setShowVerifModal] = useState(false);
   const [restoredFromStorage, setRestoredFromStorage] = useState(false);
   const [draft, setDraft] = useState<BookingDraft>(defaultDraft);
+  const confirmTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current !== null) {
+        window.clearTimeout(confirmTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -116,7 +128,10 @@ function BookingFlow({ worker }: { worker: Worker }) {
   const executeBookingConfirm = () => {
     if (busy) return;
     setBusy(true);
-    setTimeout(() => {
+    if (confirmTimerRef.current !== null) {
+      window.clearTimeout(confirmTimerRef.current);
+    }
+    confirmTimerRef.current = window.setTimeout(() => {
       const createdId = addBooking({
         workerId: worker.id,
         service: draft.service,
@@ -284,6 +299,25 @@ function BookingFlow({ worker }: { worker: Worker }) {
               </div>
             ))}
           </dl>
+          {draft.budgetMode === "budget" &&
+            Number(draft.budget) >= 100 &&
+            (() => {
+              const budgetPhp = Number(draft.budget);
+              const fourHourFloor = calculateMinimumWageFloor(4).minimumRequiredPhp;
+              const twoHourFloor = calculateMinimumWageFloor(2).minimumRequiredPhp;
+              const estimatedHours =
+                budgetPhp >= fourHourFloor ? 4 : budgetPhp >= twoHourFloor ? 2 : 1;
+              return (
+                <SettlementPreviewCard
+                  amountPhp={budgetPhp}
+                  estimatedHours={estimatedHours}
+                  employerTier={plans.includes("employer") ? "PRO" : "FREE"}
+                  employeeTier="FREE"
+                  perspective="employer"
+                  className="mt-4"
+                />
+              );
+            })()}
           <Button size="lg" className="mt-5 w-full" onClick={confirm} disabled={busy}>
             {busy && <Loader2 className="animate-spin" />}
             {busy
@@ -305,10 +339,12 @@ function BookingFlow({ worker }: { worker: Worker }) {
           className="animate-fade-up rounded-3xl border bg-card p-6 text-center shadow-soft md:p-10"
           role="status"
         >
-          <span className="mx-auto grid size-16 place-items-center rounded-full bg-secondary text-primary">
-            <CheckCircle2 className="size-9" aria-hidden />
+          <GAWConnectionMotif size="md" className="mx-auto" />
+          <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold text-primary">
+            <CheckCircle2 className="size-3.5 shrink-0" aria-hidden />
+            {tx("Connection Requested", "Naipadala ang Koneksyon", "Napadala ang Koneksyon")}
           </span>
-          <h1 className="mt-4 text-2xl font-extrabold tracking-tight">
+          <h1 className="mt-3 text-2xl font-extrabold tracking-tight">
             {tx(
               "Booking request sent!",
               "Naipadala na ang booking request!",

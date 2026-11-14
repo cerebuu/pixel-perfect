@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import type { BookingStatus } from "@/lib/gaw/store";
+import { STATUS_LABEL, type BookingStatus } from "@/lib/gaw/bookings";
 import { BARANGAYS } from "@/lib/gaw/data";
 
 export function Logo({ onDeep = false, className }: { onDeep?: boolean; className?: string }) {
@@ -51,18 +51,21 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
   confirmed: "bg-status-confirmed-bg text-status-confirmed",
   declined: "bg-status-declined-bg text-status-declined",
   completed: "bg-status-completed-bg text-status-completed",
+  in_progress: "bg-status-confirmed-bg text-status-confirmed",
+  awaiting_confirmation: "bg-status-pending-bg text-status-pending",
+  cancelled: "bg-muted text-muted-foreground",
 };
 
 export function StatusBadge({ status }: { status: BookingStatus }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
         STATUS_STYLES[status],
       )}
     >
       <span className="size-1.5 rounded-full bg-current" aria-hidden />
-      {status}
+      {STATUS_LABEL[status]}
     </span>
   );
 }

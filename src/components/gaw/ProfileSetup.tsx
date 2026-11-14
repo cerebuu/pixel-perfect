@@ -3,14 +3,14 @@ import { toast } from "sonner";
 import { Field, LocationFilter } from "./primitives";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { CATEGORIES, type Category } from "@/lib/gaw/data";
+import { CATEGORIES } from "@/lib/gaw/data";
 import { useGaw, type WorkerProfile } from "@/lib/gaw/store";
 
 export const EXPERIENCE = ["Less than 1 year", "1–3 years", "3–5 years", "5–10 years", "10+ years"];
 
 export function ProfileSetup() {
   const { saveWorkerProfile, locationId } = useGaw();
-  const [p, setP] = useState<WorkerProfile>({ skill: "Handyman", barangayId: locationId, experience: "", description: "" });
+  const [p, setP] = useState<WorkerProfile>({ skill: "Handyman", skills: [], barangayId: locationId, area: null, radiusKm: 5, experience: "", description: "" });
   const [errors, setErrors] = useState<{ experience?: string; description?: string }>({});
 
   const submit = (e: FormEvent) => {
@@ -31,7 +31,7 @@ export function ProfileSetup() {
       <p className="mt-1.5 text-muted-foreground">Tell nearby residents what you do. You can edit this later.</p>
       <form noValidate onSubmit={submit} className="mt-6 space-y-5 rounded-3xl border bg-card p-5 shadow-soft md:p-7">
         <Field id="skill" label="Primary Skill">
-          <select id="skill" className="field" value={p.skill} onChange={(e) => setP({ ...p, skill: e.target.value as Category })}>
+          <select id="skill" className="field" value={p.skill} onChange={(e) => setP({ ...p, skill: e.target.value })}>
             {CATEGORIES.map((c) => (
               <option key={c}>{c}</option>
             ))}

@@ -9,14 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BARANGAYS, barangayName, CATEGORIES, RADIUS_OPTIONS, WORKERS, type Category } from "@/lib/gaw/data";
 import { filterWorkers, type WorkerWithDistance } from "@/lib/gaw/filter";
-import { useGaw } from "@/lib/gaw/store";
+import { hiringOrigin, useGaw } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
 type FindSearch = { category?: Category | undefined; q?: string | undefined };
 
 export const Route = createFileRoute("/find")({
   validateSearch: (s: Record<string, unknown>): FindSearch => ({
-    category: CATEGORIES.includes(s["category"] as Category) ? (s["category"] as Category) : undefined,
+    category: (CATEGORIES as readonly string[]).includes(s["category"] as string) ? (s["category"] as Category) : undefined,
     q: typeof s["q"] === "string" && s["q"] ? s["q"] : undefined,
   }),
   head: () => ({
@@ -85,15 +85,18 @@ function Radar({ workers, barangayId, radius }: { workers: WorkerWithDistance[];
 
 function NearbyFinder() {
   const search = Route.useSearch();
-  const { locationId, setLocation } = useGaw();
+  const gaw = useGaw();
+  const { locationId, setLocation } = gaw;
+  const origin = hiringOrigin(gaw);
   const [category, setCategory] = useState<Category | "all">(search.category ?? "all");
   const [query, setQuery] = useState(search.q ?? "");
   const [radius, setRadius] = useState<number>(5);
   const [availableOnly, setAvailableOnly] = useState(false);
 
   const results = useMemo(
-    () => filterWorkers(WORKERS, { barangayId: locationId, category, query, radius, availableOnly }),
-    [locationId, category, query, radius, availableOnly],
+    () => filterWorkers(WORKERS, { origin, category, query, radius, availableOnly }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [origin.lat, origin.lng, category, query, radius, availableOnly],
   );
   const filtersActive = category !== "all" || query || availableOnly;
 

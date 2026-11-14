@@ -1,12 +1,12 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Briefcase, Clock, MapPin, Star } from "lucide-react";
 import { AppLayout, BackButton } from "@/components/gaw/AppLayout";
-import { CATEGORY_ICONS } from "@/components/gaw/categoryIcons";
+import { iconFor } from "@/components/gaw/categoryIcons";
 import { Avatar, Availability, SectionHeader } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import { barangayName, WORKERS, type Worker } from "@/lib/gaw/data";
-import { simulatedDistance } from "@/lib/gaw/filter";
-import { formatPeso, useGaw } from "@/lib/gaw/store";
+import { distanceKm, roundKm } from "@/lib/gaw/filter";
+import { formatPeso, hiringOrigin, useGaw } from "@/lib/gaw/store";
 
 export const Route = createFileRoute("/workers/$id")({
   loader: ({ params }) => {
@@ -47,9 +47,9 @@ function ProfilePage() {
 }
 
 function WorkerProfile({ worker }: { worker: Worker }) {
-  const { locationId } = useGaw();
-  const distance = simulatedDistance(worker, locationId);
-  const Icon = CATEGORY_ICONS[worker.skill];
+  const gaw = useGaw();
+  const distance = roundKm(distanceKm(hiringOrigin(gaw), worker));
+  const Icon = iconFor(worker.skill);
 
   const cta = (
     <Button asChild size="lg" className="w-full">
@@ -77,8 +77,7 @@ function WorkerProfile({ worker }: { worker: Worker }) {
                   <Briefcase className="size-4" aria-hidden /> {worker.jobsDone} jobs · {worker.years} yrs
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <MapPin className="size-4" aria-hidden /> {barangayName(worker.barangayId)} area · ≈{distance} km
-                  (simulated)
+                  <MapPin className="size-4" aria-hidden /> {barangayName(worker.barangayId)} area · ≈{distance} km from your location
                 </span>
               </div>
               <div className="mt-2.5">

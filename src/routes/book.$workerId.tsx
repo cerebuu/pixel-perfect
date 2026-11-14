@@ -78,6 +78,7 @@ function BookingFlow({ worker }: { worker: Worker }) {
         date: draft.date,
         time: draft.time,
         barangayId: draft.barangayId,
+        location: null,
         budget: draft.budgetMode === "budget" ? Number(draft.budget) : null,
       });
       setBusy(false);

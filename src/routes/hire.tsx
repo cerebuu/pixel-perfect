@@ -3,13 +3,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, CalendarCheck, Crown, MapPin, Search } from "lucide-react";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { WorkerCard } from "@/components/gaw/cards";
-import { CATEGORY_ICONS } from "@/components/gaw/categoryIcons";
+import { iconFor } from "@/components/gaw/categoryIcons";
 import { Avatar, LocationFilter, SectionHeader, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { barangayName, CATEGORIES, WORKERS } from "@/lib/gaw/data";
+import { barangayName, FEATURED_CATEGORIES as CATEGORIES, WORKERS } from "@/lib/gaw/data";
 import { filterWorkers } from "@/lib/gaw/filter";
-import { useGaw } from "@/lib/gaw/store";
+import { bookingsFor, hiringOrigin, useGaw } from "@/lib/gaw/store";
 
 export const Route = createFileRoute("/hire")({
   head: () => ({
@@ -37,11 +37,13 @@ function EmployerDashboard() {
 }
 
 function DashboardBody() {
-  const { account, locationId, setLocation, bookings, plans } = useGaw();
+  const gaw = useGaw();
+  const { account, locationId, setLocation, plans } = gaw;
+  const bookings = bookingsFor(gaw.bookings, "hiring");
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const nearby = filterWorkers(WORKERS, {
-    barangayId: locationId,
+    origin: hiringOrigin(gaw),
     category: "all",
     query: "",
     radius: 5,
@@ -101,7 +103,7 @@ function DashboardBody() {
         </h2>
         <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
           {CATEGORIES.map((c) => {
-            const Icon = CATEGORY_ICONS[c];
+            const Icon = iconFor(c);
             return (
               <Link
                 key={c}
@@ -135,8 +137,7 @@ function DashboardBody() {
             ))}
           </div>
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="size-3.5" aria-hidden /> Distances are simulated for this demo, based on your selected
-            barangay.
+            <MapPin className="size-3.5" aria-hidden /> Distances are measured from your selected barangay to each demo worker’s sample area.
           </p>
         </section>
 

@@ -14,7 +14,11 @@ import {
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { WorkerCard } from "@/components/gaw/cards";
 import { InteractiveMap, LocationPicker } from "@/components/gaw/GawMap";
-import { iconActionButtonClass, segmentedOptionClass, subtleLinkClass } from "@/components/gaw/interactions";
+import {
+  iconActionButtonClass,
+  segmentedOptionClass,
+  subtleLinkClass,
+} from "@/components/gaw/interactions";
 import { Avatar, Availability, EmptyState, LocationFilter } from "@/components/gaw/primitives";
 import { ServicePicker } from "@/components/gaw/ServicePicker";
 import { Button } from "@/components/ui/button";
@@ -29,36 +33,39 @@ import {
   type Worker,
 } from "@/lib/gaw/data";
 import { filterWorkers, type WorkerWithDistance } from "@/lib/gaw/filter";
-import {
-  formatPeso,
-  hasPlan,
-  hiringOrigin,
-  hiringOriginLabel,
-  useGaw,
-} from "@/lib/gaw/store";
+import { useI18n } from "@/lib/gaw/i18n";
+import { formatPeso, hasPlan, hiringOrigin, hiringOriginLabel, useGaw } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
 type FindSearch = { category?: Category | undefined; q?: string | undefined };
 
 export const Route = createFileRoute("/find")({
   validateSearch: (s: Record<string, unknown>): FindSearch => ({
-    category: typeof s["category"] === "string" && s["category"].trim() ? s["category"].trim() : undefined,
+    category:
+      typeof s["category"] === "string" && s["category"].trim() ? s["category"].trim() : undefined,
     q: typeof s["q"] === "string" && s["q"] ? s["q"] : undefined,
   }),
   head: () => ({
     meta: [
       { title: "Nearby Finder — GAW" },
-      { name: "description", content: "Find available workers within 1 to 10 km of your barangay or GPS location." },
+      {
+        name: "description",
+        content: "Find available workers within 1 to 10 km of your barangay or GPS location.",
+      },
       { property: "og:title", content: "Nearby Finder — GAW" },
-      { property: "og:description", content: "Find available workers within 1 to 10 km of your barangay or GPS location." },
+      {
+        property: "og:description",
+        content: "Find available workers within 1 to 10 km of your barangay or GPS location.",
+      },
     ],
   }),
   component: FindPage,
 });
 
 function FindPage() {
+  const { tx } = useI18n();
   return (
-    <AppLayout mode="hire" title="Nearby Finder">
+    <AppLayout mode="hire" title={tx("Nearby Finder", "Maghanap sa Malapit", "Pangita sa Duol")}>
       <NearbyFinder />
     </AppLayout>
   );
@@ -69,6 +76,7 @@ type ViewMode = "split" | "map" | "list";
 function NearbyFinder() {
   const search = Route.useSearch();
   const gaw = useGaw();
+  const { tx, translateCategory } = useI18n();
   const {
     locationId,
     setLocation,
@@ -116,7 +124,12 @@ function NearbyFinder() {
       bio: workerProfile.description,
       hours: "Flexible schedule",
       reviews: [
-        { author: "Maria S.", rating: 5, text: "Great communication and reliable work.", when: "Recent" },
+        {
+          author: "Maria S.",
+          rating: 5,
+          text: "Great communication and reliable work.",
+          when: "Recent",
+        },
       ],
       portfolio: [workerProfile.skill, ...workerProfile.skills.slice(0, 2)],
     };
@@ -134,7 +147,17 @@ function NearbyFinder() {
         topRatedOnly: isEmployerPro && topRatedOnly,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allWorkers, origin.lat, origin.lng, category, query, radius, availableOnly, isEmployerPro, topRatedOnly],
+    [
+      allWorkers,
+      origin.lat,
+      origin.lng,
+      category,
+      query,
+      radius,
+      availableOnly,
+      isEmployerPro,
+      topRatedOnly,
+    ],
   );
 
   const filtersActive = category !== "all" || query || availableOnly || topRatedOnly;
@@ -156,12 +179,21 @@ function NearbyFinder() {
           </span>
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Selected Service Location ({serviceLocation ? serviceLocation.source.toUpperCase() : "Barangay"})
+              {tx(
+                "Selected Service Location",
+                "Napiling Lokasyon ng Serbisyo",
+                "Gipiling Lokasyon sa Serbisyo",
+              )}{" "}
+              ({serviceLocation ? serviceLocation.source.toUpperCase() : "Barangay"})
             </p>
             <p className="text-sm font-extrabold text-foreground">
               {originLabel}{" "}
               <span className="font-normal text-muted-foreground">
-                · {results.length} {results.length === 1 ? "worker" : "workers"} within {radius} km
+                · {results.length}{" "}
+                {results.length === 1
+                  ? tx("worker", "manggagawa", "trabahante")
+                  : tx("workers", "manggagawa", "ka trabahante")}{" "}
+                {tx(`within ${radius} km`, `sa loob ng ${radius} km`, `sulod sa ${radius} km`)}
               </span>
             </p>
           </div>
@@ -172,21 +204,23 @@ function NearbyFinder() {
             onClick={() => setShowLocationPicker((v) => !v)}
           >
             <Navigation className="size-3.5" />
-            {showLocationPicker ? "Close Pinpoint Map" : "Use GPS / Move Pin"}
+            {showLocationPicker
+              ? tx("Close Pinpoint Map", "Isara ang Mapa", "Sirad-i ang Mapa")
+              : tx("Use GPS / Move Pin", "Gamitin ang GPS / Pin", "Gamita ang GPS / Pin")}
           </Button>
         </div>
 
         {/* View Toggle (Map + List / Map / List) */}
         <div
           role="group"
-          aria-label="Discovery view mode"
+          aria-label={tx("Discovery view mode", "Paraan ng pagtingin", "Paagi sa pagtan-aw")}
           className="inline-flex rounded-full border bg-muted p-1 text-xs font-semibold"
         >
           {(
             [
-              ["split", "Map & List", MapIcon],
-              ["map", "Map Only", MapIcon],
-              ["list", "List Only", List],
+              ["split", tx("Map & List", "Mapa at Listahan", "Mapa ug Listahan"), MapIcon],
+              ["map", tx("Map Only", "Mapa Lang", "Mapa Lang"), MapIcon],
+              ["list", tx("List Only", "Listahan Lang", "Listahan Lang"), List],
             ] as const
           ).map(([k, l, Icon]) => (
             <button
@@ -211,7 +245,11 @@ function NearbyFinder() {
       {showLocationPicker && (
         <div className="animate-fade-up">
           <LocationPicker
-            modeLabel="Employer Service Location (Live GPS or Map Pin)"
+            modeLabel={tx(
+              "Employer Service Location (Live GPS or Map Pin)",
+              "Lokasyon ng Serbisyo (Live GPS o Map Pin)",
+              "Lokasyon sa Serbisyo (Live GPS o Map Pin)",
+            )}
             initialLocation={origin}
             initialBarangayId={locationId}
             initialLabel={serviceLocation?.label ?? barangayName(locationId)}
@@ -228,15 +266,29 @@ function NearbyFinder() {
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
           <div className="space-y-4 rounded-3xl border bg-card p-5 shadow-soft">
             <div className="space-y-1.5">
-              <label htmlFor="finder-q" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Search Name or Skill
+              <label
+                htmlFor="finder-q"
+                className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+              >
+                {tx(
+                  "Search Name or Skill",
+                  "Maghanap ng Pangalan o Kasanayan",
+                  "Pangitaa ang Ngalan o Abilidad",
+                )}
               </label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <Search
+                  className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
                 <Input
                   id="finder-q"
                   type="search"
-                  placeholder="Try “Motorcycle Mechanic”, “Ramon”, or “leak”"
+                  placeholder={tx(
+                    "Try “Motorcycle Mechanic”, “Ramon”, or “leak”",
+                    "Subukan ang “Motorcycle Mechanic”, “Ramon”, o “leak”",
+                    "Sulayi ang “Motorcycle Mechanic”, “Ramon”, o “leak”",
+                  )}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   className="pl-10"
@@ -246,7 +298,11 @@ function NearbyFinder() {
 
             <LocationFilter
               id="finder-brgy"
-              label="Barangay Quick Jump"
+              label={tx(
+                "Barangay Quick Jump",
+                "Mabilisang Pili ng Barangay",
+                "Daliang Pili sa Barangay",
+              )}
               value={locationId}
               onChange={(id) => {
                 setLocation(id);
@@ -257,17 +313,21 @@ function NearbyFinder() {
             {/* Unlimited Service Categories & Custom Service Picker */}
             <ServicePicker
               id="finder-cat"
-              label="Service Category (Predefined or Custom)"
+              label={tx(
+                "Service Category (Predefined or Custom)",
+                "Kategorya ng Serbisyo (Predefined o Custom)",
+                "Kategorya sa Serbisyo (Predefined o Custom)",
+              )}
               value={category}
               onChange={(svc) => setCategory(svc)}
               includeAll
-              allLabel="All services"
+              allLabel={tx("All services", "Lahat ng serbisyo", "Tanang serbisyo")}
               allowCustom
             />
 
             <fieldset>
               <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Proximity Radius
+                {tx("Proximity Radius", "Layo (Radius)", "Gilay-on (Radius)")}
               </legend>
               <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted p-1">
                 {RADIUS_OPTIONS.map((r) => (
@@ -290,20 +350,32 @@ function NearbyFinder() {
 
             <div className="flex items-center justify-between gap-3">
               <label htmlFor="finder-avail" className="text-sm font-semibold">
-                Available now only
+                {tx("Available now only", "Available ngayon lang", "Bakante karon lang")}
               </label>
-              <Switch id="finder-avail" checked={availableOnly} onCheckedChange={setAvailableOnly} />
+              <Switch
+                id="finder-avail"
+                checked={availableOnly}
+                onCheckedChange={setAvailableOnly}
+              />
             </div>
 
             {/* Employer Pro Filter */}
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-muted/60 p-3">
               <div>
-                <label htmlFor="finder-pro-top" className="flex items-center gap-1.5 text-xs font-bold">
-                  <Crown className="size-3.5 text-gold" aria-hidden /> Top-Rated Only (4.8★+)
+                <label
+                  htmlFor="finder-pro-top"
+                  className="flex items-center gap-1.5 text-xs font-bold"
+                >
+                  <Crown className="size-3.5 text-gold" aria-hidden />{" "}
+                  {tx("Top-Rated Only (4.8★+)", "Top-Rated Lang (4.8★+)", "Top-Rated Lang (4.8★+)")}
                 </label>
                 {!isEmployerPro && (
                   <Link to="/pro" className={cn(subtleLinkClass, "mt-0.5 text-[11px] underline")}>
-                    Unlock with GAW Employer Pro (Demo) →
+                    {tx(
+                      "Unlock with GAW Employer Pro (Demo) →",
+                      "I-unlock gamit ang GAW Employer Pro (Demo) →",
+                      "I-unlock gamit ang GAW Employer Pro (Demo) →",
+                    )}
                   </Link>
                 )}
               </div>
@@ -317,7 +389,7 @@ function NearbyFinder() {
 
             {filtersActive && (
               <Button variant="ghost" size="sm" onClick={clear} className="w-full">
-                Clear filters
+                {tx("Clear filters", "Burahin ang mga filter", "Papason ang mga filter")}
               </Button>
             )}
           </div>
@@ -331,21 +403,30 @@ function NearbyFinder() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h2 className="text-base font-extrabold">
-                    Interactive Worker Map · {originLabel} ({radius} km radius)
+                    {tx(
+                      "Interactive Worker Map",
+                      "Interactive na Mapa ng Manggagawa",
+                      "Interactive nga Mapa sa Trabahante",
+                    )}{" "}
+                    · {originLabel} ({radius} km radius)
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Tap any worker marker on the map to open their card, or drag the location pin to change your search center.
+                    {tx(
+                      "Tap any worker marker on the map to open their card, or drag the location pin to change your search center.",
+                      "Pindutin ang kahit anong marker ng manggagawa sa mapa, o i-drag ang pin para ilipat ang lokasyon ng paghahanap.",
+                      "Pindota ang bisan unsang marker sa trabahante sa mapa, o i-drag ang pin aron ibalhin ang sentro sa pagpangita.",
+                    )}
                   </p>
                 </div>
                 <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-bold text-secondary-foreground">
-                  {results.length} nearby
+                  {results.length} {tx("nearby", "malapit", "duol")}
                 </span>
               </div>
 
               <InteractiveMap
                 center={origin}
                 pin={origin}
-                pinLabel={`Your service location (${originLabel})`}
+                pinLabel={`${tx("Your service location", "Iyong lokasyon", "Imong lokasyon")} (${originLabel})`}
                 draggablePin
                 onMovePin={(pos) => {
                   const near = BARANGAYS.find((b) => b.id === locationId) ?? BARANGAYS[0]!;
@@ -377,9 +458,12 @@ function NearbyFinder() {
                             {selectedWorker.rating.toFixed(1)}
                           </span>
                         </div>
-                        <p className="text-sm font-semibold text-primary">{selectedWorker.skill}</p>
+                        <p className="text-sm font-semibold text-primary">
+                          {translateCategory(selectedWorker.skill)}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          {barangayName(selectedWorker.barangayId)} · ≈ {selectedWorker.distance} km from your pin
+                          {barangayName(selectedWorker.barangayId)} · ≈ {selectedWorker.distance} km{" "}
+                          {tx("from your pin", "mula sa pin mo", "gikan sa imong pin")}
                         </p>
                       </div>
                     </div>
@@ -387,7 +471,11 @@ function NearbyFinder() {
                       type="button"
                       onClick={() => setSelectedWorker(null)}
                       className={iconActionButtonClass("default", "size-7 shrink-0")}
-                      aria-label="Close selected worker preview"
+                      aria-label={tx(
+                        "Close selected worker preview",
+                        "Isara ang preview",
+                        "Sirad-i ang preview",
+                      )}
                     >
                       <X className="size-4" />
                     </button>
@@ -396,19 +484,21 @@ function NearbyFinder() {
                     <div className="flex items-center gap-3">
                       <Availability available={selectedWorker.available} />
                       <span className="text-sm font-bold">
-                        {selectedWorker.rate ? `${formatPeso(selectedWorker.rate)} / hr` : "Request Quote"}
+                        {selectedWorker.rate
+                          ? `${formatPeso(selectedWorker.rate)} / ${tx("hr", "oras", "oras")}`
+                          : tx("Request Quote", "Humingi ng Presyo", "Mangayo og Presyo")}
                       </span>
                     </div>
                     <div className="flex gap-2">
                       <Button asChild size="sm" variant="outline">
                         <Link to="/workers/$id" params={{ id: selectedWorker.id }}>
-                          View Profile
+                          {tx("View Profile", "Tingnan ang Profile", "Tan-awa ang Profile")}
                         </Link>
                       </Button>
                       {selectedWorker.id !== "w-me" && (
                         <Button asChild size="sm">
                           <Link to="/book/$workerId" params={{ workerId: selectedWorker.id }}>
-                            Request Booking
+                            {tx("Request Booking", "Mag-book Ngayon", "I-book Karon")}
                           </Link>
                         </Button>
                       )}
@@ -431,14 +521,26 @@ function NearbyFinder() {
               ) : (
                 <EmptyState
                   icon={<SearchX className="size-6" />}
-                  title="No workers match yet"
-                  body={`Nobody fits these filters within ${radius} km of ${originLabel}. Try a wider radius or fewer filters.`}
+                  title={tx(
+                    "No workers match yet",
+                    "Walang manggagawang tumugma",
+                    "Walay trabahante nga nihaom",
+                  )}
+                  body={tx(
+                    `Nobody fits these filters within ${radius} km of ${originLabel}. Try a wider radius or fewer filters.`,
+                    `Walang pasok sa filter sa loob ng ${radius} km mula sa ${originLabel}. Subukang lawakan ang sakop o bawasan ang filter.`,
+                    `Walay nihaom sa filter sulod sa ${radius} km gikan sa ${originLabel}. Sulayi pagpalapad sa kilometro o kuhaa ang pipila ka filter.`,
+                  )}
                   action={
                     <div className="flex flex-wrap justify-center gap-2">
-                      {radius < 10 && <Button onClick={() => setRadius(10)}>Widen to 10 km</Button>}
+                      {radius < 10 && (
+                        <Button onClick={() => setRadius(10)}>
+                          {tx("Widen to 10 km", "Lawakan sa 10 km", "Palapdan ngadto sa 10 km")}
+                        </Button>
+                      )}
                       {filtersActive && (
                         <Button variant="outline" onClick={clear}>
-                          Clear filters
+                          {tx("Clear filters", "Burahin ang mga filter", "Papason ang mga filter")}
                         </Button>
                       )}
                     </div>

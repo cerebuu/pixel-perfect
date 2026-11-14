@@ -17,7 +17,12 @@ import {
   subtleArrowIconClass,
   subtleLinkClass,
 } from "@/components/gaw/interactions";
-import { AvailabilityBadge, HeaderBrand, PriceDisplay, SkillChip } from "@/components/gaw/primitives";
+import {
+  AvailabilityBadge,
+  HeaderBrand,
+  PriceDisplay,
+  SkillChip,
+} from "@/components/gaw/primitives";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +36,7 @@ import {
   MY_JOBS_TABS,
   nextStatus,
   tabForStatus,
+  type ApplicationStatus,
   type BookingStatus,
 } from "@/lib/gaw/bookings";
 import {
@@ -41,9 +47,28 @@ import {
   OTHER_CATEGORY,
   RADIUS_OPTIONS,
   WORKERS,
+  type Worker,
 } from "@/lib/gaw/data";
 import { distanceKm, filterJobs, filterWorkers, roundKm } from "@/lib/gaw/filter";
 import { formatAccuracy, geoErrorMessage } from "@/lib/gaw/geo";
+import {
+  DICTIONARIES,
+  getApplicationStatusLabel,
+  getBookingStatusLabel,
+  getMyJobsTabLabel,
+  getVerifNextText,
+  getVerifStatusLabel,
+  I18nProvider,
+  interpolate,
+  isValidLocale,
+  LanguageSelector,
+  LOCALE_BOOT_SCRIPT,
+  LOCALE_KEY,
+  SUPPORTED_LOCALES,
+  translate,
+  translateCategoryFor,
+  type Locale,
+} from "@/lib/gaw/i18n";
 import {
   addSkill,
   isPredefinedService,
@@ -51,7 +76,15 @@ import {
   offersService,
   validateCustomService,
 } from "@/lib/gaw/services";
-import { canPerformProtectedAction, hasPlan, hiringOrigin, identityVerified, type Verification } from "@/lib/gaw/store";
+import {
+  canPerformProtectedAction,
+  hasPlan,
+  hiringOrigin,
+  identityVerified,
+  initialState,
+  sanitizeLoadedState,
+  type Verification,
+} from "@/lib/gaw/store";
 import { resolveTheme, THEME_BOOT_SCRIPT } from "@/lib/gaw/theme";
 import {
   CREDENTIAL_TYPES,
@@ -63,7 +96,11 @@ import {
   validateUpload,
   VERIF_LABEL,
   VERIF_NEXT,
+  type VerifStatus,
 } from "@/lib/gaw/verification";
+import { cebPH } from "@/locales/ceb-PH";
+import { enPH, type TranslationKey } from "@/locales/en-PH";
+import { filPH } from "@/locales/fil-PH";
 
 describe("GAW V2 Feature & Functionality Suite", () => {
   describe("1. Dark Mode, Light Mode & System Default Theme", () => {
@@ -111,7 +148,9 @@ describe("GAW V2 Feature & Functionality Suite", () => {
 
       expect(validateUpload({ type: "image/png", size: 500 * 1024 })).toBeNull();
       expect(validateUpload({ type: "application/pdf", size: 1024 * 1024 })).toBeNull();
-      expect(validateUpload({ type: "application/x-msdownload", size: 1024 })).toMatch(/JPG, PNG, WEBP or PDF/);
+      expect(validateUpload({ type: "application/x-msdownload", size: 1024 })).toMatch(
+        /JPG, PNG, WEBP or PDF/,
+      );
       expect(validateUpload({ type: "image/jpeg", size: 6 * 1024 * 1024 })).toMatch(/too large/);
       expect(validateUpload({ type: "image/jpeg", size: 0 })).toMatch(/empty/);
 
@@ -345,7 +384,12 @@ describe("GAW V2 Feature & Functionality Suite", () => {
       expect(fallbackCfg.provider).toBe("osm");
       expect(fallbackCfg.url).toContain("tile.openstreetmap.org");
 
-      expect(HeaderBrand({ size: "sm" })).toBeTruthy();
+      const headerBrandHtml = renderToStaticMarkup(<HeaderBrand size="sm" />);
+      expect(headerBrandHtml).toContain("GAW");
+      expect(headerBrandHtml).toContain("Grab a Work");
+      expect(headerBrandHtml).toContain("aspect-square size-8 sm:size-[34px] md:size-9");
+      expect(headerBrandHtml).toContain("object-contain");
+      expect(headerBrandHtml).toContain("gap-2.5 sm:gap-3");
       expect(SkillChip({ children: "Motorcycle Mechanic" })).toBeTruthy();
       expect(PriceDisplay({ formattedRate: "₱300" })).toBeTruthy();
       expect(AvailabilityBadge({ available: true })).toBeTruthy();
@@ -417,6 +461,168 @@ describe("GAW V2 Feature & Functionality Suite", () => {
       );
       expect(html).toContain("Verification Center");
       expect(html).toContain('aria-hidden="true"');
+    });
+  });
+
+  describe("9. Multilingual i18n (en-PH, fil-PH, ceb-PH) & Defensive Persistence", () => {
+    it("maintains identical, non-empty translation keys across en-PH, fil-PH, and ceb-PH including all service categories", () => {
+      expect(SUPPORTED_LOCALES.map((l) => l.code)).toEqual(["en-PH", "fil-PH", "ceb-PH"]);
+
+      const enSections = Object.keys(enPH).sort();
+      expect(Object.keys(filPH).sort()).toEqual(enSections);
+      expect(Object.keys(cebPH).sort()).toEqual(enSections);
+
+      for (const section of enSections as (keyof typeof enPH)[]) {
+        const enGroup = enPH[section] as Record<string, string>;
+        const filGroup = filPH[section] as Record<string, string>;
+        const cebGroup = cebPH[section] as Record<string, string>;
+
+        const enKeys = Object.keys(enGroup).sort();
+        expect(Object.keys(filGroup).sort()).toEqual(enKeys);
+        expect(Object.keys(cebGroup).sort()).toEqual(enKeys);
+
+        for (const k of enKeys) {
+          expect(enGroup[k]!.trim().length).toBeGreaterThan(0);
+          expect(filGroup[k]!.trim().length).toBeGreaterThan(0);
+          expect(cebGroup[k]!.trim().length).toBeGreaterThan(0);
+        }
+      }
+
+      for (const cat of [...CATEGORIES, OTHER_CATEGORY]) {
+        for (const loc of ["en-PH", "fil-PH", "ceb-PH"] as Locale[]) {
+          expect(
+            (DICTIONARIES[loc].categories as Record<string, string>)[cat]?.trim().length,
+          ).toBeGreaterThan(0);
+        }
+      }
+    });
+
+    it("translates keys, interpolates tokens, and formats category and status labels across en-PH -> fil-PH -> ceb-PH -> en-PH", () => {
+      expect(interpolate("Hello {name}, {count} left", { name: "Juan", count: 3 })).toBe(
+        "Hello Juan, 3 left",
+      );
+      expect(interpolate("Keep {missing}", {})).toBe("Keep {missing}");
+
+      const key: TranslationKey = "mode.hireTitle";
+      const sequence: Locale[] = ["en-PH", "fil-PH", "ceb-PH", "en-PH"];
+      const results = sequence.map((loc) => translate(loc, key));
+      expect(results[0]).toBe("Hire a Worker");
+      expect(results[1]).not.toBe("Hire a Worker");
+      expect(results[2]).not.toBe("Hire a Worker");
+      expect(results[3]).toBe("Hire a Worker");
+
+      expect(translateCategoryFor("fil-PH", "Plumbing")).not.toBe("Plumbing");
+      expect(translateCategoryFor("ceb-PH", "Plumbing")).not.toBe("Plumbing");
+      expect(translateCategoryFor("ceb-PH", "Motorcycle Mechanic")).toBe("Motorcycle Mechanic");
+
+      const bookingStatuses: BookingStatus[] = [
+        "pending",
+        "confirmed",
+        "in_progress",
+        "awaiting_confirmation",
+        "completed",
+        "declined",
+        "cancelled",
+      ];
+      const verifStatuses: VerifStatus[] = [
+        "not_submitted",
+        "unverified",
+        "pending",
+        "verified",
+        "rejected",
+        "resubmission_required",
+      ];
+      const appStatuses: ApplicationStatus[] = ["submitted", "withdrawn", "hired"];
+
+      for (const loc of ["en-PH", "fil-PH", "ceb-PH"] as Locale[]) {
+        expect(isValidLocale(loc)).toBe(true);
+        for (const bs of bookingStatuses) {
+          expect(getBookingStatusLabel(bs, loc).trim().length).toBeGreaterThan(0);
+        }
+        for (const vs of verifStatuses) {
+          expect(getVerifStatusLabel(vs, loc).trim().length).toBeGreaterThan(0);
+          expect(getVerifNextText(vs, loc).trim().length).toBeGreaterThan(0);
+        }
+        for (const as of appStatuses) {
+          expect(getApplicationStatusLabel(as, loc).trim().length).toBeGreaterThan(0);
+        }
+        for (const tab of MY_JOBS_TABS) {
+          expect(getMyJobsTabLabel(tab.key, loc).trim().length).toBeGreaterThan(0);
+        }
+      }
+      expect(isValidLocale("fr-FR")).toBe(false);
+    });
+
+    it("provides LOCALE_BOOT_SCRIPT and renders LanguageSelector SSR-safely without flag emojis", () => {
+      expect(LOCALE_KEY).toBe("gaw:locale");
+      expect(LOCALE_BOOT_SCRIPT).toContain("gaw:locale");
+      expect(LOCALE_BOOT_SCRIPT).toContain("fil-PH");
+      expect(LOCALE_BOOT_SCRIPT).toContain("ceb-PH");
+      expect(LOCALE_BOOT_SCRIPT).toContain("document.documentElement.lang");
+
+      const selectorHtml = renderToStaticMarkup(
+        <I18nProvider>
+          <LanguageSelector variant="full" />
+        </I18nProvider>,
+      );
+      expect(selectorHtml).toContain("English");
+      expect(selectorHtml).not.toMatch(/[\u{1F1E6}-\u{1F1FF}]{2}/u);
+    });
+
+    it("sanitizes corrupted or partial localStorage state safely without crashing", () => {
+      expect(sanitizeLoadedState(null, initialState)).toEqual(initialState);
+      expect(sanitizeLoadedState(["bad"], initialState)).toEqual(initialState);
+      expect(sanitizeLoadedState("corrupted", initialState)).toEqual(initialState);
+
+      const partialCorrupt = {
+        mode: "work",
+        bookings: "not-an-array",
+        applications: null,
+        plans: 123,
+        verification: "invalid",
+      };
+      const sanitized = sanitizeLoadedState(partialCorrupt, initialState);
+      expect(sanitized.mode).toBe("work");
+      expect(sanitized.bookings).toEqual(initialState.bookings);
+      expect(sanitized.applications).toEqual(initialState.applications);
+      expect(sanitized.plans).toEqual(initialState.plans);
+      expect(sanitized.verification).toEqual(initialState.verification);
+    });
+
+    it("compares raw unrounded distances in filterWorkers so workers just outside radius are excluded", () => {
+      const origin = { lat: 7.08, lng: 125.61 };
+      const baseWorker = WORKERS[0]!;
+      const insideWorker: Worker = {
+        ...baseWorker,
+        id: "w-inside-edge",
+        name: "Inside Edge Worker",
+        lat: origin.lat + 0.0088, // ~0.98 km (rounds to 1.0 km)
+        lng: origin.lng,
+        available: true,
+      };
+      const outsideWorker: Worker = {
+        ...baseWorker,
+        id: "w-outside-edge",
+        name: "Outside Edge Worker",
+        lat: origin.lat + 0.0094, // ~1.045 km (rounds to 1.0 km, but > 1 km raw)
+        lng: origin.lng,
+        available: true,
+      };
+
+      const dIn = distanceKm(origin, insideWorker);
+      const dOut = distanceKm(origin, outsideWorker);
+      expect(dIn).toBeLessThan(1);
+      expect(dOut).toBeGreaterThan(1);
+      expect(roundKm(dOut)).toBe(1);
+
+      const results = filterWorkers([insideWorker, outsideWorker], {
+        origin,
+        category: "all",
+        query: "",
+        radius: 1,
+        availableOnly: false,
+      });
+      expect(results.map((w) => w.id)).toEqual(["w-inside-edge"]);
     });
   });
 });

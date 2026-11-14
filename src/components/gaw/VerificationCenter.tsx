@@ -25,21 +25,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { canPerformProtectedAction, identityVerified, useGaw, type VerifDoc } from "@/lib/gaw/store";
+import { useI18n } from "@/lib/gaw/i18n";
+import {
+  canPerformProtectedAction,
+  identityVerified,
+  useGaw,
+  type VerifDoc,
+} from "@/lib/gaw/store";
 import {
   CREDENTIAL_TYPES,
   formatBytes,
   ID_TYPES,
   MAX_FILE_MB,
   validateUpload,
-  VERIF_LABEL,
-  VERIF_NEXT,
   type CredentialKey,
   type VerifStatus,
 } from "@/lib/gaw/verification";
 import { cn } from "@/lib/utils";
 
 export function VerifStatusPill({ status }: { status: VerifStatus }) {
+  const { verifLabel } = useI18n();
   const styles: Record<VerifStatus, string> = {
     not_submitted: "bg-muted text-muted-foreground",
     unverified: "bg-muted text-muted-foreground",
@@ -58,9 +63,14 @@ export function VerifStatusPill({ status }: { status: VerifStatus }) {
   };
   const Icon = icons[status];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold", styles[status])}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold",
+        styles[status],
+      )}
+    >
       <Icon className="size-3.5" aria-hidden />
-      {VERIF_LABEL[status]}
+      {verifLabel(status)}
     </span>
   );
 }
@@ -96,6 +106,7 @@ export function VerificationGuardModal({
   onVerifiedContinue,
 }: VerificationGuardModalProps) {
   const { account, verification, submitVerification, setVerificationStatus } = useGaw();
+  const { t, tx } = useI18n();
   const guard = canPerformProtectedAction(verification);
   const identityDoc = verification.identity;
 
@@ -145,7 +156,13 @@ export function VerificationGuardModal({
 
   const handleSubmitIdentity = () => {
     if (!stagedIdentity) {
-      setIdentityError("Select a file or choose a clearly labeled sample document first.");
+      setIdentityError(
+        tx(
+          "Select a file or choose a clearly labeled sample document first.",
+          "Pumili muna ng file o gumamit ng sample document.",
+          "Pagpili una og file o gamita ang sample document.",
+        ),
+      );
       return;
     }
     submitVerification("identity", {
@@ -157,11 +174,16 @@ export function VerificationGuardModal({
     });
     setStagedIdentity(null);
     setShowUploadForm(false);
-    toast.success("Identity document submitted for review (Status: Pending Review)");
+    toast.success(
+      tx(
+        "Identity document submitted for review (Status: Pending Review)",
+        "Naisumite ang ID para i-review (Status: Nakabinbin)",
+        "Na-submit na ang ID alang sa review (Status: Naghulat og review)",
+      ),
+    );
   };
 
-  const displayStatus: VerifStatus =
-    guard.status === "not_submitted" ? "unverified" : guard.status;
+  const displayStatus: VerifStatus = guard.status === "not_submitted" ? "unverified" : guard.status;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -169,16 +191,19 @@ export function VerificationGuardModal({
         <DialogHeader className="text-left">
           <div className="flex flex-wrap items-center justify-between gap-2 pr-6">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-bold text-primary">
-              <ShieldCheck className="size-4" aria-hidden /> Identity Verification Required
+              <ShieldCheck className="size-4" aria-hidden /> {t("verify.gateModalTitle")}
             </span>
             <VerifStatusPill status={displayStatus} />
           </div>
           <DialogTitle className="mt-3 text-2xl font-extrabold tracking-tight">
-            Verify Your Identity to Continue
+            {tx(
+              "Verify Your Identity to Continue",
+              "I-verify ang Iyong Identity para Magpatuloy",
+              "I-verify ang Imong Identity aron Makapadayon",
+            )}
           </DialogTitle>
           <DialogDescription className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-            To keep GAW safe and trustworthy for everyone, identity verification is required before applying for jobs or
-            hiring workers.
+            {role === "work" ? t("verify.gateWorkerDesc") : t("verify.gateEmployerDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -187,42 +212,69 @@ export function VerificationGuardModal({
           {actionContext && (
             <div className="flex items-center justify-between gap-2 rounded-2xl border bg-muted/50 px-3.5 py-2.5 text-xs">
               <span className="text-muted-foreground">
-                Protected action: <strong className="text-foreground">{actionContext}</strong>
+                {tx("Protected action:", "Pinoprotektahang aksyon:", "Giprotektahan nga aksyon:")}{" "}
+                <strong className="text-foreground">{actionContext}</strong>
               </span>
-              <span className="shrink-0 font-semibold text-primary">Draft saved</span>
+              <span className="shrink-0 font-semibold text-primary">
+                {tx("Draft saved", "Naka-save ang draft", "Na-save ang draft")}
+              </span>
             </div>
           )}
 
           {/* Rejected / Resubmission Required Alert Banner */}
-          {(guard.status === "rejected" || guard.status === "resubmission_required") && guard.reason && (
-            <div
-              role="alert"
-              className={cn(
-                "rounded-2xl border p-4 text-xs leading-relaxed",
-                guard.status === "rejected"
-                  ? "border-status-declined/35 bg-status-declined-bg text-status-declined"
-                  : "border-gold/40 bg-gold-soft text-gold-foreground",
-              )}
-            >
-              <p className="font-bold">
-                {guard.status === "rejected"
-                  ? "Previous verification was rejected"
-                  : "Resubmission required"}
-              </p>
-              <p className="mt-1">{guard.reason}</p>
-            </div>
-          )}
+          {(guard.status === "rejected" || guard.status === "resubmission_required") &&
+            guard.reason && (
+              <div
+                role="alert"
+                className={cn(
+                  "rounded-2xl border p-4 text-xs leading-relaxed",
+                  guard.status === "rejected"
+                    ? "border-status-declined/35 bg-status-declined-bg text-status-declined"
+                    : "border-gold/40 bg-gold-soft text-gold-foreground",
+                )}
+              >
+                <p className="font-bold">
+                  {guard.status === "rejected"
+                    ? tx(
+                        "Previous verification was rejected",
+                        "Hindi naaprubahan ang nakaraang verification",
+                        "Wala maaprobahi ang miaging verification",
+                      )
+                    : tx(
+                        "Resubmission required",
+                        "Kailangang mag-submit muli",
+                        "Kinahanglan i-submit pag-usab",
+                      )}
+                </p>
+                <p className="mt-1">{guard.reason}</p>
+              </div>
+            )}
 
           {/* Verified State */}
           {guard.allowed && (
             <div className="space-y-4 rounded-2xl border border-status-confirmed/30 bg-status-confirmed-bg p-4 text-sm">
               <div className="flex items-center gap-2.5 font-bold text-status-confirmed">
                 <CheckCircle2 className="size-5 shrink-0" aria-hidden />
-                <span>Your identity is verified and approved!</span>
+                <span>
+                  {tx(
+                    "Your identity is verified and approved!",
+                    "Verified at aprubado na ang iyong identity!",
+                    "Verified ug aprubado na ang imong identity!",
+                  )}
+                </span>
               </div>
               <p className="text-xs text-foreground/85">
-                You can now complete your {role === "work" ? "job application" : "booking request"} immediately with
-                all your details preserved.
+                {role === "work"
+                  ? tx(
+                      "You can now complete your job application immediately with all your details preserved.",
+                      "Maaari mo nang ituloy ang iyong job application agad nang naka-save ang lahat ng detalye.",
+                      "Mahimo na nimong ipadayon dayon ang imong job application nga na-save na ang tanang detalye.",
+                    )
+                  : tx(
+                      "You can now complete your booking request immediately with all your details preserved.",
+                      "Maaari mo nang ituloy ang iyong booking request agad nang naka-save ang lahat ng detalye.",
+                      "Mahimo na nimong ipadayon dayon ang imong booking request nga na-save na ang tanang detalye.",
+                    )}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button
@@ -234,10 +286,16 @@ export function VerificationGuardModal({
                     onVerifiedContinue?.();
                   }}
                 >
-                  Continue & Submit <ArrowRight className="size-4" />
+                  {tx("Continue & Submit", "Magpatuloy at I-submit", "Padayon ug I-submit")}{" "}
+                  <ArrowRight className="size-4" />
                 </Button>
-                <Button type="button" size="lg" variant="outline" onClick={() => onOpenChange(false)}>
-                  Close
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  {t("common.close")}
                 </Button>
               </div>
             </div>
@@ -252,13 +310,29 @@ export function VerificationGuardModal({
                     <Clock className="size-5" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold">Verification Pending Review</p>
+                    <p className="text-sm font-bold">
+                      {tx(
+                        "Verification Pending Review",
+                        "Nakabinbin para sa Review",
+                        "Naghulat sa Review",
+                      )}
+                    </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Submitted ID: <strong>{identityDoc.kind}</strong> ({identityDoc.fileName})
+                      {tx("Submitted ID:", "Isinumiteng ID:", "Gi-submit nga ID:")}{" "}
+                      <strong>{identityDoc.kind}</strong> ({identityDoc.fileName})
                     </p>
                     <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                      Uploading a document does not automatically approve your account. An authorized reviewer must
-                      verify your ID before you can submit {role === "work" ? "job applications" : "hiring requests"}.
+                      {role === "work"
+                        ? tx(
+                            "Uploading a document does not automatically approve your account. An authorized reviewer must verify your ID before you can submit job applications.",
+                            "Hindi awtomatikong naaaprubahan ang account pagka-upload. Kailangan munang i-verify ng authorized reviewer ang ID bago makapag-apply sa trabaho.",
+                            "Dili awtomatikong maaprobahan ang account inig upload. Kinahanglan una i-verify sa authorized reviewer ang ID sa dili pa maka-apply og trabaho.",
+                          )
+                        : tx(
+                            "Uploading a document does not automatically approve your account. An authorized reviewer must verify your ID before you can submit hiring requests.",
+                            "Hindi awtomatikong naaaprubahan ang account pagka-upload. Kailangan munang i-verify ng authorized reviewer ang ID bago makapag-book ng worker.",
+                            "Dili awtomatikong maaprobahan ang account inig upload. Kinahanglan una i-verify sa authorized reviewer ang ID sa dili pa maka-book og worker.",
+                          )}
                     </p>
                   </div>
                 </div>
@@ -266,7 +340,11 @@ export function VerificationGuardModal({
                 {/* Prototype Reviewer Simulation Controls */}
                 <div className="mt-4 rounded-xl border border-dashed bg-card p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                    Authorized Review Simulation (Prototype Demo)
+                    {tx(
+                      "Authorized Review Simulation (Prototype Demo)",
+                      "Authorized Review Simulation (Prototype Demo)",
+                      "Authorized Review Simulation (Prototype Demo)",
+                    )}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     <Button
@@ -274,10 +352,16 @@ export function VerificationGuardModal({
                       size="sm"
                       onClick={() => {
                         setVerificationStatus("identity", "verified");
-                        toast.success("Identity verified! You can now continue your action.");
+                        toast.success(
+                          tx(
+                            "Identity verified! You can now continue your action.",
+                            "Na-verify na ang identity! Maaari ka nang magpatuloy.",
+                            "Na-verify na ang identity! Makapadayon na ka karon.",
+                          ),
+                        );
                       }}
                     >
-                      <CheckCircle2 className="size-3.5" /> Approve (Verified)
+                      <CheckCircle2 className="size-3.5" /> {t("verify.instantVerifyDemoBtn")}
                     </Button>
                     <Button
                       type="button"
@@ -286,10 +370,21 @@ export function VerificationGuardModal({
                       onClick={() => {
                         setVerificationStatus("identity", "resubmission_required");
                         setShowUploadForm(true);
-                        toast("Status updated: Resubmission required");
+                        toast(
+                          tx(
+                            "Status updated: Resubmission required",
+                            "Na-update ang status: Kailangan mag-submit muli",
+                            "Na-update ang status: Kinahanglan i-submit pag-usab",
+                          ),
+                        );
                       }}
                     >
-                      <RefreshCw className="size-3.5" /> Request Resubmission
+                      <RefreshCw className="size-3.5" />{" "}
+                      {tx(
+                        "Request Resubmission",
+                        "Humingi ng Resubmission",
+                        "Hangyo og Resubmission",
+                      )}
                     </Button>
                     <Button
                       type="button"
@@ -298,10 +393,16 @@ export function VerificationGuardModal({
                       onClick={() => {
                         setVerificationStatus("identity", "rejected");
                         setShowUploadForm(true);
-                        toast("Status updated: Rejected");
+                        toast(
+                          tx(
+                            "Status updated: Rejected",
+                            "Na-update ang status: Tinanggihan",
+                            "Na-update ang status: Gisalikway",
+                          ),
+                        );
                       }}
                     >
-                      <XCircle className="size-3.5" /> Reject
+                      <XCircle className="size-3.5" /> {tx("Reject", "Tanggihan", "Isalikway")}
                     </Button>
                   </div>
                 </div>
@@ -309,11 +410,15 @@ export function VerificationGuardModal({
 
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                  Maybe Later
+                  {tx("Maybe Later", "Mamaya na lang", "Unya na lang")}
                 </Button>
                 <Button asChild variant="secondary">
                   <Link to="/verify" onClick={() => onOpenChange(false)}>
-                    Open Verification Center
+                    {tx(
+                      "Open Verification Center",
+                      "Buksan ang Verification Center",
+                      "Ablihi ang Verification Center",
+                    )}
                   </Link>
                 </Button>
               </div>
@@ -326,13 +431,38 @@ export function VerificationGuardModal({
               {!showUploadForm ? (
                 <div className="space-y-4">
                   <div className="rounded-2xl border bg-muted/35 p-4 text-xs leading-relaxed">
-                    <p className="font-bold text-foreground">What you need to verify:</p>
+                    <p className="font-bold text-foreground">
+                      {tx(
+                        "What you need to verify:",
+                        "Ano ang kailangan i-verify:",
+                        "Unsa ang kinahanglan i-verify:",
+                      )}
+                    </p>
                     <ul className="mt-2 list-inside list-disc space-y-1 text-muted-foreground">
                       <li>
-                        Valid government-issued photo ID matching <strong>{account?.name ?? "your account"}</strong>
+                        {tx(
+                          "Valid government-issued photo ID matching",
+                          "Valid na government ID na tugma sa pangalan ng",
+                          "Valid nga government ID nga tugma sa ngalan sa",
+                        )}{" "}
+                        <strong>
+                          {account?.name ?? tx("your account", "iyong account", "imong account")}
+                        </strong>
                       </li>
-                      <li>Optional Barangay Clearance or trade certificate when applicable</li>
-                      <li>Documents are kept private and accessible only to authorized reviewers</li>
+                      <li>
+                        {tx(
+                          "Optional Barangay Clearance or trade certificate when applicable",
+                          "Opsyonal na Barangay Clearance o trade certificate kung mayroon",
+                          "Opsyonal nga Barangay Clearance o trade certificate kon naa",
+                        )}
+                      </li>
+                      <li>
+                        {tx(
+                          "Documents are kept private and accessible only to authorized reviewers",
+                          "Pribado ang mga dokumento at authorized reviewers lang ang makakakita",
+                          "Pribado ang mga dokumento ug authorized reviewers ra ang makakita",
+                        )}
+                      </li>
                     </ul>
                   </div>
 
@@ -343,7 +473,8 @@ export function VerificationGuardModal({
                       className="flex-1"
                       onClick={() => setShowUploadForm(true)}
                     >
-                      <ShieldCheck className="size-4" /> Verify Now
+                      <ShieldCheck className="size-4" />{" "}
+                      {tx("Verify Now", "I-verify Ngayon", "I-verify Karon")}
                     </Button>
                     <Button
                       type="button"
@@ -352,26 +483,41 @@ export function VerificationGuardModal({
                       className="flex-1"
                       onClick={() => onOpenChange(false)}
                     >
-                      Maybe Later
+                      {tx("Maybe Later", "Mamaya na lang", "Unya na lang")}
                     </Button>
                   </div>
 
                   <p className="text-center text-xs text-muted-foreground">
-                    Prefer the full page?{" "}
+                    {tx(
+                      "Prefer the full page?",
+                      "Gusto mo ang buong pahina?",
+                      "Mas ganahan sa tibuok pahina?",
+                    )}{" "}
                     <Link
                       to="/verify"
                       onClick={() => onOpenChange(false)}
                       className={subtleLinkClass}
                     >
-                      Go to Account Settings → Verification Center
+                      {tx(
+                        "Go to Account Settings → Verification Center",
+                        "Pumunta sa Account Settings → Verification Center",
+                        "Adto sa Account Settings → Verification Center",
+                      )}
                     </Link>
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4 rounded-2xl border bg-card p-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="modal-id-type-select" className="block text-xs font-bold uppercase tracking-wide text-primary">
-                      Select Government-Issued Photo ID
+                    <label
+                      htmlFor="modal-id-type-select"
+                      className="block text-xs font-bold uppercase tracking-wide text-primary"
+                    >
+                      {tx(
+                        "Select Government-Issued Photo ID",
+                        "Pumili ng Government-Issued Photo ID",
+                        "Pagpili og Government-Issued Photo ID",
+                      )}
                     </label>
                     <select
                       id="modal-id-type-select"
@@ -379,9 +525,9 @@ export function VerificationGuardModal({
                       value={selectedIdType}
                       onChange={(e) => setSelectedIdType(e.target.value)}
                     >
-                      {ID_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
+                      {ID_TYPES.map((idOpt) => (
+                        <option key={idOpt} value={idOpt}>
+                          {idOpt}
                         </option>
                       ))}
                     </select>
@@ -395,14 +541,30 @@ export function VerificationGuardModal({
                       )}
                     >
                       <Upload className="size-4 text-primary" aria-hidden />
-                      <span className="text-xs font-bold">Upload ID Photo / PDF</span>
-                      <span className="text-[11px] text-muted-foreground">Max {MAX_FILE_MB} MB</span>
+                      <span className="text-xs font-bold">
+                        {tx(
+                          "Upload ID Photo / PDF",
+                          "Mag-upload ng ID / PDF",
+                          "Pag-upload og ID / PDF",
+                        )}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {tx(
+                          `Max ${MAX_FILE_MB} MB`,
+                          `Max ${MAX_FILE_MB} MB`,
+                          `Max ${MAX_FILE_MB} MB`,
+                        )}
+                      </span>
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/webp,application/pdf"
                         onChange={handleIdentityFile}
                         className="sr-only"
-                        aria-label="Upload government ID file"
+                        aria-label={tx(
+                          "Upload government ID file",
+                          "Mag-upload ng government ID file",
+                          "Pag-upload og government ID file",
+                        )}
                       />
                     </label>
 
@@ -415,8 +577,14 @@ export function VerificationGuardModal({
                       )}
                     >
                       <Sparkles className="size-4" aria-hidden />
-                      <span className="text-xs font-bold">Use Sample ID (Demo)</span>
-                      <span className="text-[11px] opacity-85">Safe sample {selectedIdType.split(" ")[0]}</span>
+                      <span className="text-xs font-bold">{t("verify.uploadSampleBtn")}</span>
+                      <span className="text-[11px] opacity-85">
+                        {tx(
+                          `Safe sample ${selectedIdType.split(" ")[0]}`,
+                          `Ligtas na sample ${selectedIdType.split(" ")[0]}`,
+                          `Luwas nga sample ${selectedIdType.split(" ")[0]}`,
+                        )}
+                      </span>
                     </button>
                   </div>
 
@@ -435,8 +603,13 @@ export function VerificationGuardModal({
                             {selectedIdType} · {formatBytes(stagedIdentity.fileSize)}
                           </p>
                         </div>
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setStagedIdentity(null)}>
-                          Clear
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setStagedIdentity(null)}
+                        >
+                          {t("common.clear")}
                         </Button>
                       </div>
                     </div>
@@ -445,15 +618,15 @@ export function VerificationGuardModal({
                   <div className="flex flex-col gap-2 pt-1 sm:flex-row">
                     <Button type="button" className="flex-1" onClick={handleSubmitIdentity}>
                       {guard.status === "rejected" || guard.status === "resubmission_required"
-                        ? "Resubmit ID for Review"
-                        : "Submit ID for Verification Review"}
+                        ? tx(
+                            "Resubmit ID for Review",
+                            "I-submit Muli ang ID",
+                            "I-submit Pag-usab ang ID",
+                          )
+                        : t("verify.submitVerificationBtn")}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => onOpenChange(false)}
-                    >
-                      Maybe Later
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                      {tx("Maybe Later", "Mamaya na lang", "Unya na lang")}
                     </Button>
                   </div>
                 </div>
@@ -468,7 +641,15 @@ export function VerificationGuardModal({
 
 export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?: boolean }) {
   const gaw = useGaw();
-  const { account, mode, verification, submitVerification, setVerificationStatus, removeVerification } = gaw;
+  const {
+    account,
+    mode,
+    verification,
+    submitVerification,
+    setVerificationStatus,
+    removeVerification,
+  } = gaw;
+  const { t, tx, verifNext } = useI18n();
   const [roleView, setRoleView] = useState<"hire" | "work">(mode ?? "work");
   const [selectedIdType, setSelectedIdType] = useState<string>(ID_TYPES[0]);
   const [stagedIdentity, setStagedIdentity] = useState<PendingUpload | null>(null);
@@ -512,7 +693,13 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
 
   const handleSubmitIdentity = () => {
     if (!stagedIdentity) {
-      setIdentityError("Select a file or choose a clearly labeled sample document first.");
+      setIdentityError(
+        tx(
+          "Select a file or choose a clearly labeled sample document first.",
+          "Pumili muna ng file o gumamit ng sample document.",
+          "Pagpili una og file o gamita ang sample document.",
+        ),
+      );
       return;
     }
     submitVerification("identity", {
@@ -523,7 +710,13 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
       isSample: stagedIdentity.isSample,
     });
     setStagedIdentity(null);
-    toast.success("Identity document submitted for review (Status: Pending Review)");
+    toast.success(
+      tx(
+        "Identity document submitted for review (Status: Pending Review)",
+        "Naisumite ang ID para i-review (Status: Nakabinbin)",
+        "Na-submit na ang ID alang sa review (Status: Naghulat og review)",
+      ),
+    );
   };
 
   const handleCredFile = (key: CredentialKey, e: ChangeEvent<HTMLInputElement>) => {
@@ -568,13 +761,26 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
         previewUrl: null,
       },
     }));
-    toast(`Sample ${label.split("/")[0]?.trim()} staged — click Submit to send for review`);
+    toast(
+      tx(
+        `Sample ${label.split("/")[0]?.trim()} staged — click Submit to send for review`,
+        `Nakahanda ang sample ${label.split("/")[0]?.trim()} — i-click ang I-submit para ma-review`,
+        `Andam na ang sample ${label.split("/")[0]?.trim()} — i-click ang I-submit aron ma-review`,
+      ),
+    );
   };
 
   const handleSubmitCred = (key: CredentialKey, label: string) => {
     const staged = stagedCreds[key];
     if (!staged) {
-      setCredErrors((s) => ({ ...s, [key]: "Upload a file or select the sample document first." }));
+      setCredErrors((s) => ({
+        ...s,
+        [key]: tx(
+          "Upload a file or select the sample document first.",
+          "Mag-upload muna ng file o piliin ang sample document.",
+          "Pag-upload una og file o pilia ang sample document.",
+        ),
+      }));
       return;
     }
     submitVerification(key, {
@@ -589,7 +795,13 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
       delete next[key];
       return next;
     });
-    toast.success(`${label.split("/")[0]?.trim()} submitted for review`);
+    toast.success(
+      tx(
+        `${label.split("/")[0]?.trim()} submitted for review`,
+        `Naisumite ang ${label.split("/")[0]?.trim()} para i-review`,
+        `Na-submit ang ${label.split("/")[0]?.trim()} alang sa review`,
+      ),
+    );
   };
 
   return (
@@ -599,15 +811,26 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-primary">
-              <ShieldCheck className="size-4" aria-hidden /> GAW Trust & Verification Center
+              <ShieldCheck className="size-4" aria-hidden />{" "}
+              {tx(
+                "GAW Trust & Verification Center",
+                "GAW Trust at Verification Center",
+                "GAW Trust ug Verification Center",
+              )}
             </span>
             <h2 className="text-xl font-extrabold tracking-tight md:text-2xl">
-              Role-aware verification for safer local hiring
+              {tx(
+                "Role-aware verification for safer local hiring",
+                "Pag-verify na angkop sa papel para sa mas ligtas na pag-hire",
+                "Pag-verify nga haom sa papel alang sa mas luwas nga pag-hire",
+              )}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Verification helps Davao City residents and workers know they are dealing with real people. Submitting an ID
-              places it in <strong>Pending Review</strong> — a <strong>Verified</strong> badge only appears after review is
-              approved.
+              {tx(
+                "Verification helps Davao City residents and workers know they are dealing with real people. Submitting an ID places it in Pending Review — a Verified badge only appears after review is approved.",
+                "Tinutulungan ng verification ang mga taga-Davao at manggagawa na makasigurong totoong tao ang kausap. Mapupunta muna ito sa Nakabinbin — lalabas lang ang Verified badge kapag aprubado na.",
+                "Makatabang ang verification sa mga taga-Davao ug trabahante nga makasiguro nga tinuod nga tawo ang kaistorya. Moadto una kini sa Naghulat — mogawas ra ang Verified badge kon aprubado na.",
+              )}
             </p>
           </div>
           <div className="shrink-0">
@@ -627,7 +850,8 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
             </div>
             {identityVerified(verification) && (
               <span className="inline-flex items-center gap-1 font-bold text-primary">
-                <CheckCircle2 className="size-3.5" aria-hidden /> Identity Verified
+                <CheckCircle2 className="size-3.5" aria-hidden />{" "}
+                {tx("Identity Verified", "Verified ang Identity", "Verified ang Identity")}
               </span>
             )}
           </div>
@@ -637,11 +861,19 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
         <div className="mt-4 flex items-start gap-2.5 rounded-2xl border border-primary/25 bg-secondary/60 p-3.5 text-xs text-secondary-foreground">
           <Info className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
           <div>
-            <p className="font-bold">Prototype Privacy Protection</p>
+            <p className="font-bold">
+              {tx(
+                "Prototype Privacy Protection",
+                "Proteksyon sa Privacy ng Prototype",
+                "Proteksyon sa Privacy sa Prototype",
+              )}
+            </p>
             <p className="mt-0.5">
-              Because this is a hackathon prototype without encrypted government-ID storage infrastructure,{" "}
-              <strong>do not upload sensitive real IDs</strong>. Only file metadata is stored locally in your browser, or you
-              can use the one-click <strong>Sample Document (Demo)</strong> buttons below.
+              {tx(
+                "Because this is a hackathon prototype without encrypted government-ID storage infrastructure, do not upload sensitive real IDs. Only file metadata is stored locally in your browser, or you can use the one-click Sample Document (Demo) buttons below.",
+                "Dahil hackathon prototype ito at walang naka-encrypt na storage para sa ID, huwag mag-upload ng totoong sensitibong ID. Metadata lang ng file ang naka-save sa browser, o gamitin ang mga Sample Document (Demo) button sa ibaba.",
+                "Tungod kay hackathon prototype kini ug walay naka-encrypt nga storage para sa ID, ayaw pag-upload og tinuod nga sensitibong ID. Metadata ra sa file ang naka-save sa browser, o gamita ang mga Sample Document (Demo) button sa ubos.",
+              )}
             </p>
           </div>
         </div>
@@ -649,24 +881,40 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
         {showRoleToggle && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
             <p className="text-xs font-semibold text-muted-foreground">
-              Viewing requirements for:
+              {tx(
+                "Viewing requirements for:",
+                "Tinitingnang mga kinakailangan para sa:",
+                "Gitan-aw nga mga kinahanglanon alang sa:",
+              )}
             </p>
             <div className="inline-flex rounded-full border border-border/60 bg-muted p-1 text-xs font-semibold">
               <button
                 type="button"
                 aria-pressed={roleView === "work"}
                 onClick={() => setRoleView("work")}
-                className={segmentedOptionClass(roleView === "work", "card", "rounded-full px-3.5 py-1.5")}
+                className={segmentedOptionClass(
+                  roleView === "work",
+                  "card",
+                  "rounded-full px-3.5 py-1.5",
+                )}
               >
-                Worker Verification
+                {tx("Worker Verification", "Verification ng Worker", "Verification sa Worker")}
               </button>
               <button
                 type="button"
                 aria-pressed={roleView === "hire"}
                 onClick={() => setRoleView("hire")}
-                className={segmentedOptionClass(roleView === "hire", "card", "rounded-full px-3.5 py-1.5")}
+                className={segmentedOptionClass(
+                  roleView === "hire",
+                  "card",
+                  "rounded-full px-3.5 py-1.5",
+                )}
               >
-                Employer Verification
+                {tx(
+                  "Employer Verification",
+                  "Verification ng Nag-book",
+                  "Verification sa Nag-book",
+                )}
               </button>
             </div>
           </div>
@@ -678,12 +926,29 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-primary">
-              Basic Identity Verification · {roleView === "hire" ? "Household Employer" : "Worker & Employer"}
+              {tx(
+                "Basic Identity Verification",
+                "Pangunahing Pag-verify ng Identity",
+                "Panguna nga Pag-verify sa Identity",
+              )}{" "}
+              ·{" "}
+              {roleView === "hire"
+                ? tx("Household Employer", "May-ari ng Bahay / Nag-book", "Tagbalay / Nag-book")
+                : tx("Worker & Employer", "Worker at Nag-book", "Worker ug Nag-book")}
             </p>
-            <h3 className="mt-0.5 text-lg font-extrabold">1. Government-Issued Photo ID</h3>
+            <h3 className="mt-0.5 text-lg font-extrabold">1. {t("verify.idSectionTitle")}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Used only to confirm your legal name matches your GAW account ({account?.name ?? "your profile"}).
-              {roleView === "hire" && " Ordinary household employers only need basic identity verification — no trade credentials required."}
+              {tx(
+                `Used only to confirm your legal name matches your GAW account (${account?.name ?? "your profile"}).`,
+                `Ginagamit lang ito para tiyaking tugma ang pangalan mo sa iyong GAW account (${account?.name ?? "iyong profile"}).`,
+                `Gigamit ra kini aron masiguro nga tugma ang imong ngalan sa imong GAW account (${account?.name ?? "imong profile"}).`,
+              )}
+              {roleView === "hire" &&
+                tx(
+                  " Ordinary household employers only need basic identity verification — no trade credentials required.",
+                  " Basic ID verification lang ang kailangan para sa mga household employer — hindi kailangan ng trade credentials.",
+                  " Basic ID verification ra ang kinahanglan sa mga household employer — dili kinahanglan og trade credentials.",
+                )}
             </p>
           </div>
           <VerifStatusPill status={identityStatus} />
@@ -693,27 +958,39 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
         <div className="mt-4 flex items-center gap-2 rounded-2xl bg-muted px-4 py-3 text-xs">
           <AlertCircle className="size-4 shrink-0 text-primary" aria-hidden />
           <span>
-            <strong>Next step:</strong> {VERIF_NEXT[identityStatus]}
+            <strong>{tx("Next step:", "Susunod:", "Sunod:")}</strong> {verifNext(identityStatus)}
           </span>
         </div>
 
         {/* Rejection or Resubmission Reason Banner */}
-        {identityDoc && (identityDoc.status === "rejected" || identityDoc.status === "resubmission_required") && identityDoc.reason && (
-          <div
-            role="alert"
-            className={cn(
-              "mt-4 rounded-2xl border p-4 text-xs leading-relaxed",
-              identityDoc.status === "rejected"
-                ? "border-status-declined/35 bg-status-declined-bg text-status-declined"
-                : "border-gold/40 bg-gold-soft text-gold-foreground",
-            )}
-          >
-            <p className="font-bold">
-              {identityDoc.status === "rejected" ? "Reason for rejection:" : "Reason resubmission is required:"}
-            </p>
-            <p className="mt-1">{identityDoc.reason}</p>
-          </div>
-        )}
+        {identityDoc &&
+          (identityDoc.status === "rejected" || identityDoc.status === "resubmission_required") &&
+          identityDoc.reason && (
+            <div
+              role="alert"
+              className={cn(
+                "mt-4 rounded-2xl border p-4 text-xs leading-relaxed",
+                identityDoc.status === "rejected"
+                  ? "border-status-declined/35 bg-status-declined-bg text-status-declined"
+                  : "border-gold/40 bg-gold-soft text-gold-foreground",
+              )}
+            >
+              <p className="font-bold">
+                {identityDoc.status === "rejected"
+                  ? tx(
+                      "Reason for rejection:",
+                      "Dahilan ng pagtanggi:",
+                      "Hinungdan sa pagkasalikway:",
+                    )
+                  : tx(
+                      "Reason resubmission is required:",
+                      "Dahilan kung bakit kailangang mag-submit muli:",
+                      "Hinungdan ngano kinahanglan i-submit pag-usab:",
+                    )}
+              </p>
+              <p className="mt-1">{identityDoc.reason}</p>
+            </div>
+          )}
 
         {/* Existing submitted Identity Document */}
         {identityDoc && (
@@ -741,10 +1018,17 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                 variant="outline"
                 onClick={() => {
                   removeVerification("identity");
-                  toast("Removed submitted ID — you can upload a replacement.");
+                  toast(
+                    tx(
+                      "Removed submitted ID — you can upload a replacement.",
+                      "Naalis ang isinumiteng ID — maaari kang mag-upload ng kapalit.",
+                      "Gikuha ang na-submit nga ID — mahimo ka mag-upload og puli.",
+                    ),
+                  );
                 }}
               >
-                <Trash2 className="size-3.5" /> Remove / Replace
+                <Trash2 className="size-3.5" />{" "}
+                {tx("Remove / Replace", "Alisin / Palitan", "Kuhaa / Ilisi")}
               </Button>
             </div>
 
@@ -752,7 +1036,11 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
             {identityDoc.status === "pending" && (
               <div className="rounded-xl border border-dashed bg-card p-3">
                 <p className="text-xs font-semibold text-muted-foreground">
-                  Prototype Demo Controls — Simulate Trust & Safety review outcome:
+                  {tx(
+                    "Prototype Demo Controls — Simulate Trust & Safety review outcome:",
+                    "Prototype Demo Controls — I-simulate ang resulta ng review:",
+                    "Prototype Demo Controls — I-simulate ang resulta sa review:",
+                  )}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button
@@ -760,10 +1048,21 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                     size="sm"
                     onClick={() => {
                       setVerificationStatus("identity", "verified");
-                      toast.success("Demo review: Identity marked as Verified!");
+                      toast.success(
+                        tx(
+                          "Demo review: Identity marked as Verified!",
+                          "Demo review: Minarkahang Verified ang Identity!",
+                          "Demo review: Gimarkahang Verified ang Identity!",
+                        ),
+                      );
                     }}
                   >
-                    <CheckCircle2 className="size-3.5" /> Simulate: Approve (Verified)
+                    <CheckCircle2 className="size-3.5" />{" "}
+                    {tx(
+                      "Simulate: Approve (Verified)",
+                      "I-simulate: Aprubahan (Verified)",
+                      "I-simulate: Aprobahan (Verified)",
+                    )}
                   </Button>
                   <Button
                     type="button"
@@ -771,10 +1070,21 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                     variant="outline"
                     onClick={() => {
                       setVerificationStatus("identity", "resubmission_required");
-                      toast("Demo review: Resubmission requested");
+                      toast(
+                        tx(
+                          "Demo review: Resubmission requested",
+                          "Demo review: Humiling ng resubmission",
+                          "Demo review: Nangayo og resubmission",
+                        ),
+                      );
                     }}
                   >
-                    <RefreshCw className="size-3.5" /> Simulate: Request Resubmission
+                    <RefreshCw className="size-3.5" />{" "}
+                    {tx(
+                      "Simulate: Request Resubmission",
+                      "I-simulate: Humingi ng Resubmission",
+                      "I-simulate: Pangayo og Resubmission",
+                    )}
                   </Button>
                   <Button
                     type="button"
@@ -782,10 +1092,17 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                     variant="outline"
                     onClick={() => {
                       setVerificationStatus("identity", "rejected");
-                      toast("Demo review: Identity marked as Rejected");
+                      toast(
+                        tx(
+                          "Demo review: Identity marked as Rejected",
+                          "Demo review: Minarkahang Tinanggihan ang Identity",
+                          "Demo review: Gimarkahang Gisalikway ang Identity",
+                        ),
+                      );
                     }}
                   >
-                    <XCircle className="size-3.5" /> Simulate: Reject
+                    <XCircle className="size-3.5" />{" "}
+                    {tx("Simulate: Reject", "I-simulate: Tanggihan", "I-simulate: Isalikway")}
                   </Button>
                 </div>
               </div>
@@ -801,7 +1118,11 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
           <div className="mt-5 space-y-4 border-t pt-4">
             <div className="space-y-1.5">
               <label htmlFor="id-type-select" className="block text-sm font-semibold">
-                Acceptable Government-Issued Photo ID
+                {tx(
+                  "Acceptable Government-Issued Photo ID",
+                  "Tinatanggap na Government-Issued Photo ID",
+                  "Madawat nga Government-Issued Photo ID",
+                )}
               </label>
               <select
                 id="id-type-select"
@@ -809,9 +1130,9 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                 value={selectedIdType}
                 onChange={(e) => setSelectedIdType(e.target.value)}
               >
-                {ID_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                {ID_TYPES.map((idOpt) => (
+                  <option key={idOpt} value={idOpt}>
+                    {idOpt}
                   </option>
                 ))}
               </select>
@@ -825,14 +1146,26 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                 )}
               >
                 <Upload className="size-5 text-primary" aria-hidden />
-                <span className="text-xs font-bold">Upload ID Photo or PDF</span>
-                <span className="text-[11px] text-muted-foreground">JPG, PNG, WEBP, or PDF · Max {MAX_FILE_MB} MB</span>
+                <span className="text-xs font-bold">
+                  {tx(
+                    "Upload ID Photo or PDF",
+                    "Mag-upload ng Larawan ng ID o PDF",
+                    "Pag-upload og Hulagway sa ID o PDF",
+                  )}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  JPG, PNG, WEBP, PDF · Max {MAX_FILE_MB} MB
+                </span>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp,application/pdf"
                   onChange={handleIdentityFile}
                   className="sr-only"
-                  aria-label="Upload government ID file"
+                  aria-label={tx(
+                    "Upload government ID file",
+                    "Mag-upload ng government ID file",
+                    "Pag-upload og government ID file",
+                  )}
                 />
               </label>
 
@@ -845,8 +1178,14 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                 )}
               >
                 <Sparkles className="size-5" aria-hidden />
-                <span className="text-xs font-bold">Use Sample Document (Demo)</span>
-                <span className="text-[11px] opacity-85">Safe sample {selectedIdType.split(" ")[0]} for testing</span>
+                <span className="text-xs font-bold">{t("verify.uploadSampleBtn")}</span>
+                <span className="text-[11px] opacity-85">
+                  {tx(
+                    `Safe sample ${selectedIdType.split(" ")[0]} for testing`,
+                    `Ligtas na sample ${selectedIdType.split(" ")[0]} para sa demo`,
+                    `Luwas nga sample ${selectedIdType.split(" ")[0]} para sa demo`,
+                  )}
+                </span>
               </button>
             </div>
 
@@ -864,7 +1203,11 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                     {stagedIdentity.previewUrl ? (
                       <img
                         src={stagedIdentity.previewUrl}
-                        alt="Uploaded ID preview"
+                        alt={tx(
+                          "Uploaded ID preview",
+                          "Preview ng na-upload na ID",
+                          "Preview sa na-upload nga ID",
+                        )}
                         className="size-14 rounded-xl border object-cover"
                       />
                     ) : (
@@ -873,22 +1216,39 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                       </div>
                     )}
                     <div>
-                      <p className="text-xs font-bold">Preview: {stagedIdentity.fileName}</p>
+                      <p className="text-xs font-bold">
+                        {tx("Preview:", "Preview:", "Preview:")} {stagedIdentity.fileName}
+                      </p>
                       <p className="text-[11px] text-muted-foreground">
                         {selectedIdType} · {formatBytes(stagedIdentity.fileSize)}{" "}
-                        {stagedIdentity.isSample && "· Demo sample document"}
+                        {stagedIdentity.isSample &&
+                          tx(
+                            "· Demo sample document",
+                            "· Demo sample document",
+                            "· Demo sample document",
+                          )}
                       </p>
                     </div>
                   </div>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setStagedIdentity(null)}>
-                    Clear
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setStagedIdentity(null)}
+                  >
+                    {t("common.clear")}
                   </Button>
                 </div>
 
                 <Button type="button" className="mt-3 w-full" onClick={handleSubmitIdentity}>
-                  {identityDoc?.status === "rejected" || identityDoc?.status === "resubmission_required"
-                    ? "Resubmit ID for Verification Review"
-                    : "Submit ID for Verification Review"}
+                  {identityDoc?.status === "rejected" ||
+                  identityDoc?.status === "resubmission_required"
+                    ? tx(
+                        "Resubmit ID for Verification Review",
+                        "I-submit Muli ang ID para I-review",
+                        "I-submit Pag-usab ang ID alang sa Review",
+                      )
+                    : t("verify.submitVerificationBtn")}
                 </Button>
               </div>
             )}
@@ -901,12 +1261,19 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
         <section className="rounded-3xl border bg-card p-5 shadow-soft md:p-7">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-primary">
-              Optional Worker Supporting Credentials
+              {tx(
+                "Optional Worker Supporting Credentials",
+                "Opsyonal na Mga Kredensyal ng Worker",
+                "Opsyonal nga Mga Kredensyal sa Worker",
+              )}
             </p>
-            <h3 className="mt-0.5 text-lg font-extrabold">2. Trade & Residency Documents (Optional)</h3>
+            <h3 className="mt-0.5 text-lg font-extrabold">2. {t("verify.credSectionTitle")}</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              You can save and use your worker profile while verification is pending or unsubmitted. Barangay Clearance is{" "}
-              <strong>not mandatory by default</strong> and does not verify trade skill or guarantee safety.
+              {tx(
+                "You can save and use your worker profile while verification is pending or unsubmitted. Barangay Clearance is not mandatory by default and does not verify trade skill or guarantee safety.",
+                "Maaari mong i-save at gamitin ang worker profile kahit nakabinbin o hindi pa naisusumite ang verification. Hindi sapilitan ang Barangay Clearance at hindi ito garantiya ng kasanayan o kaligtasan.",
+                "Mahimo nimong i-save ug gamiton ang worker profile bisan og naghulat o wala pa na-submit ang verification. Dili pugos ang Barangay Clearance ug dili kini garantiya sa kahanas o kaluwasan.",
+              )}
             </p>
           </div>
 
@@ -916,13 +1283,41 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
               const status: VerifStatus = doc?.status ?? "not_submitted";
               const staged = stagedCreds[c.key];
               const err = credErrors[c.key];
+              const credLabel = c.label.includes("Barangay")
+                ? tx("Barangay Clearance", "Barangay Clearance", "Barangay Clearance")
+                : c.label.includes("TESDA")
+                  ? tx(
+                      "TESDA National Certificate (NC II / NC III)",
+                      "TESDA National Certificate (NC II / NC III)",
+                      "TESDA National Certificate (NC II / NC III)",
+                    )
+                  : c.label.includes("PRC")
+                    ? tx("PRC / Trade License", "PRC / Trade License", "PRC / Trade License")
+                    : c.label;
+              const credHelp = c.label.includes("Barangay")
+                ? tx(
+                    "Optional residency clearance issued by your Davao City barangay hall.",
+                    "Opsyonal na clearance ng paninirahan mula sa inyong barangay hall sa Davao.",
+                    "Opsyonal nga clearance sa pinuy-anan gikan sa inyong barangay hall sa Davao.",
+                  )
+                : c.label.includes("TESDA")
+                  ? tx(
+                      "Optional TESDA NC certificate to showcase formal trade training.",
+                      "Opsyonal na TESDA NC certificate para maipakita ang pormal na pagsasanay.",
+                      "Opsyonal nga TESDA NC certificate aron mapakita ang pormal nga pagbansay.",
+                    )
+                  : tx(
+                      "Optional trade or professional credential.",
+                      "Opsyonal na propesyonal o trade credential.",
+                      "Opsyonal nga propesyonal o trade credential.",
+                    );
 
               return (
                 <div key={c.key} className="rounded-2xl border p-4">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <h4 className="font-bold">{c.label}</h4>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{c.help}</p>
+                      <h4 className="font-bold">{credLabel}</h4>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{credHelp}</p>
                     </div>
                     <VerifStatusPill status={status} />
                   </div>
@@ -944,25 +1339,44 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                           variant="ghost"
                           onClick={() => {
                             removeVerification(c.key);
-                            toast(`Removed ${c.label}`);
+                            toast(
+                              tx(
+                                `Removed ${credLabel}`,
+                                `Naalis ang ${credLabel}`,
+                                `Gikuha ang ${credLabel}`,
+                              ),
+                            );
                           }}
                         >
-                          <Trash2 className="size-3.5" /> Remove / Replace
+                          <Trash2 className="size-3.5" />{" "}
+                          {tx("Remove / Replace", "Alisin / Palitan", "Kuhaa / Ilisi")}
                         </Button>
                       </div>
 
                       {doc.status === "pending" && (
                         <div className="flex flex-wrap items-center gap-2 border-t pt-2">
-                          <span className="text-[11px] font-semibold text-muted-foreground">Demo review:</span>
+                          <span className="text-[11px] font-semibold text-muted-foreground">
+                            {tx("Demo review:", "Demo review:", "Demo review:")}
+                          </span>
                           <Button
                             type="button"
                             size="sm"
                             onClick={() => {
                               setVerificationStatus(c.key, "verified");
-                              toast.success(`${c.label.split("/")[0]?.trim()} marked as Verified`);
+                              toast.success(
+                                tx(
+                                  `${credLabel.split("/")[0]?.trim()} marked as Verified`,
+                                  `Minarkahang Verified ang ${credLabel.split("/")[0]?.trim()}`,
+                                  `Gimarkahang Verified ang ${credLabel.split("/")[0]?.trim()}`,
+                                ),
+                              );
                             }}
                           >
-                            Simulate: Approve
+                            {tx(
+                              "Simulate: Approve",
+                              "I-simulate: Aprubahan",
+                              "I-simulate: Aprobahan",
+                            )}
                           </Button>
                           <Button
                             type="button"
@@ -970,10 +1384,20 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                             variant="outline"
                             onClick={() => {
                               setVerificationStatus(c.key, "rejected");
-                              toast(`${c.label.split("/")[0]?.trim()} marked as Rejected`);
+                              toast(
+                                tx(
+                                  `${credLabel.split("/")[0]?.trim()} marked as Rejected`,
+                                  `Minarkahang Tinanggihan ang ${credLabel.split("/")[0]?.trim()}`,
+                                  `Gimarkahang Gisalikway ang ${credLabel.split("/")[0]?.trim()}`,
+                                ),
+                              );
                             }}
                           >
-                            Simulate: Reject
+                            {tx(
+                              "Simulate: Reject",
+                              "I-simulate: Tanggihan",
+                              "I-simulate: Isalikway",
+                            )}
                           </Button>
                         </div>
                       )}
@@ -988,7 +1412,7 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                           )}
                         >
                           <Upload className="size-3.5 text-primary" aria-hidden />
-                          Upload File
+                          {tx("Upload File", "Mag-upload ng File", "Pag-upload og File")}
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,application/pdf"
@@ -1000,9 +1424,14 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() => handleUseSampleCred(c.key, c.label)}
+                          onClick={() => handleUseSampleCred(c.key, credLabel)}
                         >
-                          <Sparkles className="size-3.5" /> Use Sample {c.key.toUpperCase()} Doc
+                          <Sparkles className="size-3.5" />{" "}
+                          {tx(
+                            `Use Sample ${c.key.toUpperCase()} Doc`,
+                            `Gumamit ng Sample ${c.key.toUpperCase()} Doc`,
+                            `Gamita ang Sample ${c.key.toUpperCase()} Doc`,
+                          )}
                         </Button>
                       </div>
 
@@ -1015,15 +1444,20 @@ export function VerificationCenter({ showRoleToggle = true }: { showRoleToggle?:
                       {staged && (
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/40 p-2.5 text-xs">
                           <span>
-                            Ready: <strong>{staged.fileName}</strong> ({formatBytes(staged.fileSize)})
+                            {tx("Ready:", "Handa:", "Andam:")} <strong>{staged.fileName}</strong> (
+                            {formatBytes(staged.fileSize)})
                           </span>
                           <div className="flex gap-2">
                             <Button
                               type="button"
                               size="sm"
-                              onClick={() => handleSubmitCred(c.key, c.label)}
+                              onClick={() => handleSubmitCred(c.key, credLabel)}
                             >
-                              Submit Credential
+                              {tx(
+                                "Submit Credential",
+                                "I-submit ang Kredensyal",
+                                "I-submit ang Kredensyal",
+                              )}
                             </Button>
                           </div>
                         </div>

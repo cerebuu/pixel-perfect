@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { LocationPicker } from "./GawMap";
 import { Field, LocationFilter } from "./primitives";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BARANGAYS, barangayName, type Worker } from "@/lib/gaw/data";
+import { useI18n } from "@/lib/gaw/i18n";
 import type { PlacedLocation } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
@@ -36,13 +37,15 @@ function todayISO() {
 export function validateBooking(d: BookingDraft, today = todayISO()) {
   const e: Partial<Record<keyof BookingDraft, string>> = {};
   if (!d.service || !d.service.trim()) e.service = "Choose or enter a service type.";
-  if (d.description.trim().length < 10) e.description = "Describe the job in at least 10 characters.";
+  if (d.description.trim().length < 10)
+    e.description = "Describe the job in at least 10 characters.";
   if (!d.date) e.date = "Pick a preferred date.";
   else if (d.date < today) e.date = "Pick today or a future date.";
   if (!d.time) e.time = "Pick a preferred time.";
   if (d.budgetMode === "budget") {
     const n = Number(d.budget);
-    if (!d.budget || Number.isNaN(n) || n < 100) e.budget = "Enter a budget of at least ₱100, or request a quote.";
+    if (!d.budget || Number.isNaN(n) || n < 100)
+      e.budget = "Enter a budget of at least ₱100, or request a quote.";
   }
   return e;
 }
@@ -50,16 +53,36 @@ export function validateBooking(d: BookingDraft, today = todayISO()) {
 export function BookingForm({
   worker,
   initial,
+  onChange,
   onReview,
 }: {
   worker: Worker;
   initial: BookingDraft;
+  onChange?: (d: BookingDraft) => void;
   onReview: (d: BookingDraft) => void;
 }) {
+  const { tx } = useI18n();
   const [d, setD] = useState<BookingDraft>(initial);
   const [showMap, setShowMap] = useState(false);
   const [errors, setErrors] = useState<ReturnType<typeof validateBooking>>({});
-  const set = <K extends keyof BookingDraft>(k: K, v: BookingDraft[K]) => setD((s) => ({ ...s, [k]: v }));
+
+  useEffect(() => {
+    setD(initial);
+  }, [initial]);
+
+  const patchDraft = (partial: Partial<BookingDraft>) => {
+    setD((s) => {
+      const next = { ...s, ...partial };
+      onChange?.(next);
+      return next;
+    });
+  };
+
+  const set = <K extends keyof BookingDraft>(k: K, v: BookingDraft[K]) => {
+    patchDraft({ [k]: v } as Pick<BookingDraft, K>);
+    setErrors((cur) => ({ ...cur, [k]: undefined }));
+  };
+
   const workerServices = Array.from(new Set([worker.skill, ...worker.skills]));
 
   const submit = (e: FormEvent) => {
@@ -82,7 +105,11 @@ export function BookingForm({
     <form noValidate onSubmit={submit} className="space-y-5">
       <ServicePicker
         id="service"
-        label="Service Type (Predefined or Custom)"
+        label={tx(
+          "Service Type (Predefined or Custom)",
+          "Uri ng Serbisyo (Predefined o Custom)",
+          "Klase sa Serbisyo (Predefined o Custom)",
+        )}
         value={d.service}
         onChange={(svc) => set("service", svc)}
         extraOptions={workerServices}
@@ -90,18 +117,35 @@ export function BookingForm({
         error={errors.service}
       />
 
-      <Field id="description" label="Job Description" error={errors.description} hint="What needs fixing? Any details help.">
+      <Field
+        id="description"
+        label={tx("Job Description", "Paglalarawan ng Trabaho", "Paghulagway sa Trabaho")}
+        error={errors.description}
+        hint={tx(
+          "What needs fixing? Any details help.",
+          "Ano ang kailangang ayusin? Makakatulong ang anumang detalye.",
+          "Unsay kinahanglan ayuhon? Makatabang ang bisan unsang detalye.",
+        )}
+      >
         <Textarea
           id="description"
           value={d.description}
           onChange={(e) => set("description", e.target.value)}
-          placeholder="e.g. Water leaking under the kitchen sink since yesterday."
+          placeholder={tx(
+            "e.g. Water leaking under the kitchen sink since yesterday.",
+            "hal. May tumutulong tubig sa ilalim ng lababo mula kahapon.",
+            "pananglitan, Nagtulo ang tubig ilawom sa lababo sukad gahapon.",
+          )}
           {...aria("description")}
         />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="date" label="Preferred Date" error={errors.date}>
+        <Field
+          id="date"
+          label={tx("Preferred Date", "Gustong Petsa", "Gusto nga Petsa")}
+          error={errors.date}
+        >
           <Input
             id="date"
             type="date"
@@ -111,9 +155,19 @@ export function BookingForm({
             {...aria("date")}
           />
         </Field>
-        <Field id="time" label="Preferred Time" error={errors.time}>
-          <select id="time" className="field" value={d.time} onChange={(e) => set("time", e.target.value)} {...aria("time")}>
-            <option value="">Select a time</option>
+        <Field
+          id="time"
+          label={tx("Preferred Time", "Gustong Oras", "Gusto nga Oras")}
+          error={errors.time}
+        >
+          <select
+            id="time"
+            className="field"
+            value={d.time}
+            onChange={(e) => set("time", e.target.value)}
+            {...aria("time")}
+          >
+            <option value="">{tx("Select a time", "Pumili ng oras", "Pagpili og oras")}</option>
             {TIME_SLOTS.map((t) => (
               <option key={t} value={t}>
                 {formatTime(t)}
@@ -127,11 +181,14 @@ export function BookingForm({
         <div className="flex flex-wrap items-end justify-between gap-2">
           <LocationFilter
             id="barangayId"
-            label="Barangay / Service Area"
+            label={tx(
+              "Barangay / Service Area",
+              "Barangay / Lugar ng Serbisyo",
+              "Barangay / Dapit sa Serbisyo",
+            )}
             value={d.barangayId}
             onChange={(v) => {
-              set("barangayId", v);
-              set("location", null);
+              patchDraft({ barangayId: v, location: null });
             }}
             className="flex-1"
           />
@@ -142,25 +199,31 @@ export function BookingForm({
             onClick={() => setShowMap((v) => !v)}
           >
             <Navigation className="size-3.5" />
-            {showMap ? "Close Map" : "Pinpoint on Map / GPS"}
+            {showMap
+              ? tx("Close Map", "Isara ang Mapa", "Sirad-i ang Mapa")
+              : tx("Pinpoint on Map / GPS", "Ituro sa Mapa / GPS", "Itudlo sa Mapa / GPS")}
           </Button>
         </div>
 
         {d.location && (
           <p className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-            <MapPin className="size-3.5" aria-hidden /> Pinpointed: {d.location.label}
+            <MapPin className="size-3.5" aria-hidden />{" "}
+            {tx("Pinpointed:", "Napiling lokasyon:", "Gitudlo nga lokasyon:")} {d.location.label}
           </p>
         )}
 
         {showMap && (
           <LocationPicker
-            modeLabel="Pinpoint Job Service Location"
+            modeLabel={tx(
+              "Pinpoint Job Service Location",
+              "Ituro ang Lokasyon ng Serbisyo",
+              "Itudlo ang Lokasyon sa Serbisyo",
+            )}
             initialLocation={mapInit}
             initialBarangayId={d.barangayId}
             initialLabel={d.location?.label ?? barangayName(d.barangayId)}
             onConfirm={(placed, brgyId) => {
-              set("barangayId", brgyId);
-              set("location", placed);
+              patchDraft({ barangayId: brgyId, location: placed });
               setShowMap(false);
             }}
           />
@@ -168,12 +231,12 @@ export function BookingForm({
       </div>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">Budget</legend>
+        <legend className="text-sm font-semibold">{tx("Budget", "Badyet", "Badyet")}</legend>
         <div className="grid grid-cols-2 gap-2">
           {(
             [
-              ["budget", "Set my budget"],
-              ["quote", "Request a quote"],
+              ["budget", tx("Set my budget", "Magtakda ng badyet", "Magbutang og badyet")],
+              ["quote", tx("Request a quote", "Humingi ng presyo", "Mangayo og presyo")],
             ] as const
           ).map(([v, l]) => (
             <label
@@ -198,7 +261,11 @@ export function BookingForm({
           ))}
         </div>
         {d.budgetMode === "budget" && (
-          <Field id="budget" label="Amount (PHP)" error={errors.budget}>
+          <Field
+            id="budget"
+            label={tx("Amount (PHP)", "Halaga (PHP)", "Kantidad (PHP)")}
+            error={errors.budget}
+          >
             <Input
               id="budget"
               inputMode="numeric"
@@ -212,7 +279,7 @@ export function BookingForm({
       </fieldset>
 
       <Button type="submit" size="lg" className="w-full">
-        Review Details
+        {tx("Review Details", "Suriin ang Detalye", "Susiha ang Detalye")}
       </Button>
     </form>
   );

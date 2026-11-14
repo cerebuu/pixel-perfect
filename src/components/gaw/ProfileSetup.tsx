@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BARANGAYS, barangayName, SKILL_SUGGESTIONS } from "@/lib/gaw/data";
+import { useI18n } from "@/lib/gaw/i18n";
 import { addSkill, normalizeService, validateCustomService } from "@/lib/gaw/services";
 import { useGaw, type WorkerProfile } from "@/lib/gaw/store";
 
@@ -22,8 +23,10 @@ export function ProfileSetup({
   onDone?: (() => void) | undefined;
 } = {}) {
   const { saveWorkerProfile, locationId, workerProfile } = useGaw();
+  const { tx, translateCategory } = useI18n();
   const seed = initial ?? workerProfile;
-  const defaultBrgy = BARANGAYS.find((b) => b.id === (seed?.barangayId ?? locationId)) ?? BARANGAYS[0]!;
+  const defaultBrgy =
+    BARANGAYS.find((b) => b.id === (seed?.barangayId ?? locationId)) ?? BARANGAYS[0]!;
 
   const [p, setP] = useState<WorkerProfile>({
     skill: seed?.skill ?? "Handyman",
@@ -40,7 +43,11 @@ export function ProfileSetup({
   const [skillError, setSkillError] = useState<string | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
-  const [errors, setErrors] = useState<{ skill?: string; experience?: string; description?: string }>({});
+  const [errors, setErrors] = useState<{
+    skill?: string;
+    experience?: string;
+    description?: string;
+  }>({});
 
   const filteredSuggestions = SKILL_SUGGESTIONS.filter(
     (s) =>
@@ -59,7 +66,9 @@ export function ProfileSetup({
     const next = addSkill(p.skills, raw, p.skill);
     setP((prev) => ({ ...prev, skills: next }));
     setSkillInput("");
-    toast.success(`Added skill: ${normalizeService(raw)}`);
+    toast.success(
+      `${tx("Added skill:", "Naidagdag na kasanayan:", "Nadugang nga abilidad:")} ${normalizeService(raw)}`,
+    );
   };
 
   const handleRemoveSkill = (skillToRemove: string) => {
@@ -90,8 +99,20 @@ export function ProfileSetup({
     const errs: typeof errors = {};
     const skillErr = validateCustomService(p.skill);
     if (skillErr) errs.skill = skillErr;
-    if (!p.experience) errs.experience = "Select your experience.";
-    if (p.description.trim().length < 15) errs.description = "Write at least 15 characters so residents know you.";
+    if (!p.experience) {
+      errs.experience = tx(
+        "Select your experience.",
+        "Piliin ang iyong karanasan.",
+        "Pilia ang imong kasinatian.",
+      );
+    }
+    if (p.description.trim().length < 15) {
+      errs.description = tx(
+        "Write at least 15 characters so residents know you.",
+        "Maglagay ng hindi bababa sa 15 karakter para makilala ka ng mga residente.",
+        "Pagsulat og labing menos 15 ka karakter aron mailhan ka sa mga residente.",
+      );
+    }
     setErrors(errs);
     if (Object.keys(errs).length) return;
     saveWorkerProfile({
@@ -99,7 +120,19 @@ export function ProfileSetup({
       skill: normalizeService(p.skill),
       description: p.description.trim(),
     });
-    toast.success(seed ? "Worker profile updated!" : "Worker profile ready! You can now apply for jobs.");
+    toast.success(
+      seed
+        ? tx(
+            "Worker profile updated!",
+            "Na-update na ang worker profile!",
+            "Na-update na ang worker profile!",
+          )
+        : tx(
+            "Worker profile ready! You can now apply for jobs.",
+            "Handa na ang worker profile mo! Maaari ka nang mag-apply sa trabaho.",
+            "Andam na ang imong worker profile! Pwede na ka mo-apply sa trabaho.",
+          ),
+    );
     onDone?.();
   };
 
@@ -108,20 +141,52 @@ export function ProfileSetup({
   return (
     <div className="mx-auto max-w-2xl">
       <p className="text-sm font-semibold uppercase tracking-wide text-primary">
-        {seed ? "Edit Worker Profile & Skills" : "Step 1 of 1 · takes a minute"}
+        {seed
+          ? tx(
+              "Edit Worker Profile & Skills",
+              "I-edit ang Profile at Kasanayan",
+              "Usba ang Profile ug Abilidad",
+            )
+          : tx(
+              "Step 1 of 1 · takes a minute",
+              "Hakbang 1 ng 1 · isang minuto lang",
+              "Lakang 1 sa 1 · usa ka minuto lang",
+            )}
       </p>
       <h1 className="mt-1 text-2xl font-extrabold tracking-tight md:text-3xl">
-        {seed ? "Update your skills & service area" : "Set up your worker profile"}
+        {seed
+          ? tx(
+              "Update your skills & service area",
+              "I-update ang iyong kasanayan at sakop na lugar",
+              "I-update ang imong abilidad ug sakop nga lugar",
+            )
+          : tx(
+              "Set up your worker profile",
+              "I-set up ang iyong worker profile",
+              "I-set up ang imong worker profile",
+            )}
       </h1>
       <p className="mt-1.5 text-muted-foreground">
-        Choose a predefined or custom primary skill, add multiple additional skills, and set your Davao City working radius.
+        {tx(
+          "Choose a predefined or custom primary skill, add multiple additional skills, and set your Davao City working radius.",
+          "Pumili ng pangunahing kasanayan (predefined o custom), magdagdag ng iba pang kasanayan, at itakda ang iyong sakop sa Davao City.",
+          "Pagpili og panguna nga abilidad (predefined o custom), pagdugang og ubang abilidad, ug itakda ang imong sakop sa Davao City.",
+        )}
       </p>
 
-      <form noValidate onSubmit={submit} className="mt-6 space-y-6 rounded-3xl border bg-card p-5 shadow-soft md:p-7">
+      <form
+        noValidate
+        onSubmit={submit}
+        className="mt-6 space-y-6 rounded-3xl border bg-card p-5 shadow-soft md:p-7"
+      >
         {/* 1. Primary Skill (Predefined or Custom) */}
         <ServicePicker
           id="skill"
-          label="Primary Skill (Predefined or Custom)"
+          label={tx(
+            "Primary Skill (Predefined or Custom)",
+            "Pangunahing Kasanayan (Predefined o Custom)",
+            "Panguna nga Abilidad (Predefined o Custom)",
+          )}
           value={p.skill}
           onChange={(skill) =>
             setP((prev) => ({
@@ -140,14 +205,27 @@ export function ProfileSetup({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <label htmlFor="additional-skill-input" className="block text-sm font-bold">
-                Additional Skills & Specialties
+                {tx(
+                  "Additional Skills & Specialties",
+                  "Iba Pang Kasanayan at Espesyalidad",
+                  "Dugang nga Abilidad ug Espesyalidad",
+                )}
               </label>
               <p className="text-xs text-muted-foreground">
-                Add custom skills or specialties so residents can find you for more tasks.
+                {tx(
+                  "Add custom skills or specialties so residents can find you for more tasks.",
+                  "Magdagdag ng custom na kasanayan para mahanap ka ng mga residente sa mas maraming gawain.",
+                  "Pagdugang og custom nga abilidad aron makit-an ka sa mga residente alang sa ubang trabaho.",
+                )}
               </p>
             </div>
             <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-bold text-secondary-foreground">
-              {p.skills.length} additional {p.skills.length === 1 ? "skill" : "skills"}
+              {p.skills.length}{" "}
+              {tx(
+                `additional ${p.skills.length === 1 ? "skill" : "skills"}`,
+                "karagdagang kasanayan",
+                "dugang nga abilidad",
+              )}
             </span>
           </div>
 
@@ -178,7 +256,7 @@ export function ProfileSetup({
                     </div>
                   ) : (
                     <>
-                      <span>{s}</span>
+                      <span>{translateCategory(s)}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -206,7 +284,13 @@ export function ProfileSetup({
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">No additional skills added yet.</p>
+            <p className="text-xs text-muted-foreground">
+              {tx(
+                "No additional skills added yet.",
+                "Wala pang karagdagang kasanayan.",
+                "Wala pay dugang nga abilidad.",
+              )}
+            </p>
           )}
 
           {/* Add Custom Skill Input */}
@@ -224,10 +308,14 @@ export function ProfileSetup({
                   handleAddSkill();
                 }
               }}
-              placeholder="Add custom skill (e.g. Graphic Designer, Motorcycle Mechanic, Tutor)…"
+              placeholder={tx(
+                "Add custom skill (e.g. Graphic Designer, Motorcycle Mechanic, Tutor)…",
+                "Magdagdag ng kasanayan (hal. Graphic Designer, Motorcycle Mechanic, Tutor)…",
+                "Pagdugang og abilidad (pananglitan, Graphic Designer, Motorcycle Mechanic, Tutor)…",
+              )}
             />
             <Button type="button" variant="outline" onClick={() => handleAddSkill()}>
-              <Plus className="size-4" /> Add Skill
+              <Plus className="size-4" /> {tx("Add Skill", "Idagdag", "Idugang")}
             </Button>
           </div>
 
@@ -241,7 +329,8 @@ export function ProfileSetup({
           {filteredSuggestions.length > 0 && (
             <div className="space-y-1.5">
               <p className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
-                <Sparkles className="size-3 text-primary" aria-hidden /> Quick-add suggestions:
+                <Sparkles className="size-3 text-primary" aria-hidden />{" "}
+                {tx("Quick-add suggestions:", "Mabilisang mungkahi:", "Daliang mga sugyot:")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {filteredSuggestions.map((s) => (
@@ -264,14 +353,23 @@ export function ProfileSetup({
           <div className="flex items-start gap-2 rounded-2xl bg-secondary/50 px-3.5 py-2.5 text-xs text-secondary-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
             <span>
-              <strong>Worker Location Privacy:</strong> Your live device GPS position never automatically becomes your
-              public location. Employers only see your general service area ({barangayName(p.barangayId)}) and {p.radiusKm}{" "}
-              km coverage radius.
+              <strong>
+                {tx("Worker Location Privacy:", "Privacy ng Lokasyon:", "Privacy sa Lokasyon:")}
+              </strong>{" "}
+              {tx(
+                `Your live device GPS position never automatically becomes your public location. Employers only see your general service area (${barangayName(p.barangayId)}) and ${p.radiusKm} km coverage radius.`,
+                `Hindi kailanman awtomatikong isinasapubliko ang eksaktong GPS ng device mo. Ang pangkalahatang lugar (${barangayName(p.barangayId)}) at ${p.radiusKm} km radius lang ang nakikita.`,
+                `Dili awtomatikong ipakita sa publiko ang imong live GPS. Ang kinatibuk-ang lugar (${barangayName(p.barangayId)}) ug ${p.radiusKm} km radius lang ang makita.`,
+              )}
             </span>
           </div>
 
           <LocationPicker
-            modeLabel="Worker Service Area & Radius"
+            modeLabel={tx(
+              "Worker Service Area & Radius",
+              "Lugar ng Serbisyo at Radius",
+              "Dapit sa Serbisyo ug Radius",
+            )}
             initialLocation={mapOrigin}
             initialBarangayId={p.barangayId}
             initialLabel={`${barangayName(p.barangayId)} service area`}
@@ -284,12 +382,20 @@ export function ProfileSetup({
                 area: { lat: placed.lat, lng: placed.lng },
               }));
             }}
-            confirmLabel="Confirm Service Area"
+            confirmLabel={tx(
+              "Confirm Service Area",
+              "Kumpirmahin ang Lugar",
+              "Kumpirmaha ang Dapit",
+            )}
           />
         </div>
 
         {/* 4. Experience & Bio */}
-        <Field id="experience" label="Experience" error={errors.experience}>
+        <Field
+          id="experience"
+          label={tx("Experience", "Karanasan", "Kasinatian")}
+          error={errors.experience}
+        >
           <select
             id="experience"
             className="field"
@@ -298,14 +404,22 @@ export function ProfileSetup({
             aria-invalid={!!errors.experience}
             aria-describedby={errors.experience ? "experience-error" : undefined}
           >
-            <option value="">Select experience</option>
+            <option value="">
+              {tx("Select experience", "Piliin ang karanasan", "Pilia ang kasinatian")}
+            </option>
             {EXPERIENCE.map((x) => (
-              <option key={x}>{x}</option>
+              <option key={x} value={x}>
+                {x}
+              </option>
             ))}
           </select>
         </Field>
 
-        <Field id="description" label="Short Description" error={errors.description}>
+        <Field
+          id="description"
+          label={tx("Short Description", "Maikling Pagpapakilala", "Mubo nga Pagpaila")}
+          error={errors.description}
+        >
           <Textarea
             id="description"
             value={p.description}
@@ -319,11 +433,13 @@ export function ProfileSetup({
         <div className="flex flex-wrap gap-3">
           {onDone && (
             <Button type="button" variant="outline" size="lg" className="flex-1" onClick={onDone}>
-              Cancel
+              {tx("Cancel", "Kanselahin", "Kanselahon")}
             </Button>
           )}
           <Button type="submit" size="lg" className="flex-1">
-            {seed ? "Save Profile Changes" : "Save & Start Working"}
+            {seed
+              ? tx("Save Profile Changes", "I-save ang Pagbabago", "I-save ang Kausaban")
+              : tx("Save & Start Working", "I-save at Magsimula", "I-save ug Sugdi")}
           </Button>
         </div>
       </form>

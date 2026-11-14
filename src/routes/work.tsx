@@ -23,8 +23,8 @@ import { Avatar, EmptyState, SectionHeader, StatusBadge } from "@/components/gaw
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { barangayName, JOBS } from "@/lib/gaw/data";
+import { useI18n } from "@/lib/gaw/i18n";
 import { identityVerified, useGaw } from "@/lib/gaw/store";
-import { VERIF_LABEL, VERIF_NEXT } from "@/lib/gaw/verification";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/work")({
@@ -33,22 +33,34 @@ export const Route = createFileRoute("/work")({
       { title: "Find work nearby — GAW" },
       { name: "description", content: "See nearby jobs and booking requests in Davao City." },
       { property: "og:title", content: "Find work nearby — GAW" },
-      { property: "og:description", content: "See nearby jobs and booking requests in Davao City." },
+      {
+        property: "og:description",
+        content: "See nearby jobs and booking requests in Davao City.",
+      },
     ],
   }),
-  component: () => (
+  component: WorkPage,
+});
+
+function WorkPage() {
+  return (
     <AppLayout mode="work">
       <WorkerHome />
     </AppLayout>
-  ),
-});
+  );
+}
 
 function WorkerHome() {
   const { workerProfile } = useGaw();
   const [editing, setEditing] = useState(false);
 
   if (!workerProfile || editing) {
-    return <ProfileSetup initial={workerProfile} onDone={workerProfile ? () => setEditing(false) : undefined} />;
+    return (
+      <ProfileSetup
+        initial={workerProfile}
+        onDone={workerProfile ? () => setEditing(false) : undefined}
+      />
+    );
   }
   return <WorkerDashboard onEditProfile={() => setEditing(true)} />;
 }
@@ -64,6 +76,7 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
     plans,
     verification,
   } = useGaw();
+  const { tx, translateCategory, verifLabel, verifNext } = useI18n();
 
   if (!p || !account) return null;
 
@@ -96,12 +109,15 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
           <div className="flex items-center gap-4">
             <Avatar initials={initials} size="lg" className="ring-4 ring-deep-foreground/15" />
             <div>
-              <p className="text-sm text-deep-muted">Working mode</p>
+              <p className="text-sm text-deep-muted">
+                {tx("Working mode", "Magtrabaho mode", "Magtrabaho mode")}
+              </p>
               <h1 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold tracking-tight">
                 <span>{account.name}</span>
                 {verified && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-xs font-bold text-primary-foreground">
-                    <CheckCircle2 className="size-3" aria-hidden /> Verified
+                    <CheckCircle2 className="size-3" aria-hidden />{" "}
+                    {tx("Verified", "Beripikado", "Beripikado")}
                   </span>
                 )}
                 {plans.includes("worker") && (
@@ -111,9 +127,10 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
                 )}
               </h1>
               <p className="mt-1 flex flex-wrap items-center gap-x-3 text-sm text-deep-muted">
-                <span className="font-semibold text-gold">{p.skill}</span>
+                <span className="font-semibold text-gold">{translateCategory(p.skill)}</span>
                 <span className="inline-flex items-center gap-1">
-                  <MapPin className="size-3.5" aria-hidden /> {barangayName(p.barangayId)} ({p.radiusKm} km radius)
+                  <MapPin className="size-3.5" aria-hidden /> {barangayName(p.barangayId)} (
+                  {p.radiusKm} km radius)
                 </span>
                 <span>{p.experience}</span>
               </p>
@@ -124,7 +141,7 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
                       key={s}
                       className="rounded-full bg-deep-foreground/15 px-2.5 py-0.5 text-xs font-medium text-deep-foreground"
                     >
-                      {s}
+                      {translateCategory(s)}
                     </span>
                   ))}
                 </div>
@@ -136,10 +153,22 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             <div className="flex items-center justify-between gap-4 rounded-2xl bg-deep-foreground/10 px-4 py-3 md:min-w-64">
               <div>
                 <label htmlFor="avail" className="block text-sm font-bold">
-                  {available ? "Available for work" : "Not available"}
+                  {available
+                    ? tx("Available for work", "Available sa trabaho", "Bakante sa trabaho")
+                    : tx("Not available", "Hindi available", "Dili bakante")}
                 </label>
                 <p className="text-xs text-deep-muted">
-                  {available ? "Residents can send you requests" : "Hidden from new requests"}
+                  {available
+                    ? tx(
+                        "Residents can send you requests",
+                        "Makakapagpadala ng request ang mga residente",
+                        "Makapadala og request ang mga residente",
+                      )
+                    : tx(
+                        "Hidden from new requests",
+                        "Nakatago sa mga bagong request",
+                        "Gitago sa bag-ong mga request",
+                      )}
                 </p>
               </div>
               <Switch
@@ -147,7 +176,15 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
                 checked={available}
                 onCheckedChange={(v) => {
                   setAvailable(v);
-                  toast(v ? "You're now available" : "You're now unavailable");
+                  toast(
+                    v
+                      ? tx("You're now available", "Available ka na ngayon", "Bakante ka na karon")
+                      : tx(
+                          "You're now unavailable",
+                          "Hindi ka muna available",
+                          "Dili ka usa bakante",
+                        ),
+                  );
                 }}
                 className="data-[state=checked]:bg-gold data-[state=unchecked]:bg-deep-foreground/25"
               />
@@ -160,18 +197,23 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
               onClick={onEditProfile}
               className="self-start md:self-end"
             >
-              <Pencil className="size-3.5" /> Edit Profile, Skills & Area
+              <Pencil className="size-3.5" />{" "}
+              {tx(
+                "Edit Profile, Skills & Area",
+                "I-edit ang Profile, Kasanayan at Lugar",
+                "Usba ang Profile, Abilidad ug Dapit",
+              )}
             </Button>
           </div>
         </div>
 
         <dl className="mt-6 grid grid-cols-3 gap-2 text-center">
           {[
-            ["New requests", pending.length],
-            ["Active & upcoming", upcoming.length],
-            ["Applications", applications.length],
+            [tx("New requests", "Bagong request", "Bag-ong request"), pending.length],
+            [tx("Active & upcoming", "Aktibo at darating", "Aktibo ug umaabot"), upcoming.length],
+            [tx("Applications", "Mga aplikasyon", "Mga aplikasyon"), applications.length],
           ].map(([l, n]) => (
-            <div key={l} className="rounded-2xl bg-deep-foreground/10 px-2 py-3">
+            <div key={String(l)} className="rounded-2xl bg-deep-foreground/10 px-2 py-3">
               <dd className="text-2xl font-extrabold">{n}</dd>
               <dt className="text-xs text-deep-muted">{l}</dt>
             </div>
@@ -189,12 +231,18 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
               </span>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-bold">Worker Verification</p>
+                  <p className="text-sm font-bold">
+                    {tx(
+                      "Worker Verification",
+                      "Beripikasyon ng Manggagawa",
+                      "Beripikasyon sa Trabahante",
+                    )}
+                  </p>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                    {VERIF_LABEL[idStatus]}
+                    {verifLabel(idStatus)}
                   </span>
                 </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">{VERIF_NEXT[idStatus]}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{verifNext(idStatus)}</p>
               </div>
             </div>
             <Button asChild size="sm" variant="outline" className="shrink-0">
@@ -204,10 +252,11 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
 
           <div>
             <SectionHeader
-              title="Nearby jobs"
+              title={tx("Nearby jobs", "Mga trabaho sa malapit", "Mga trabaho sa duol")}
               action={
                 <Link to="/jobs" className={subtleLinkClass}>
-                  Find jobs <ArrowRight className={subtleArrowIconClass} aria-hidden />
+                  {tx("Find jobs", "Maghanap ng trabaho", "Pangita og trabaho")}{" "}
+                  <ArrowRight className={subtleArrowIconClass} aria-hidden />
                 </Link>
               }
             />
@@ -222,15 +271,27 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
         <aside className="space-y-6">
           <section>
             <SectionHeader
-              title="Incoming requests"
+              title={tx("Incoming requests", "Mga papasok na request", "Mga niabot nga request")}
               action={
-                <Link to="/my-jobs" search={{ tab: "pending" }} className={cn(subtleLinkClass, "text-xs")}>
-                  Manage in My Jobs →
+                <Link
+                  to="/my-jobs"
+                  search={{ tab: "pending" }}
+                  className={cn(subtleLinkClass, "text-xs")}
+                >
+                  {tx(
+                    "Manage in My Jobs →",
+                    "Pamahalaan sa Aking Trabaho →",
+                    "Dumalaa sa Akong Trabaho →",
+                  )}
                 </Link>
               }
             />
             <p className="-mt-2 mb-3 text-xs text-muted-foreground">
-              Direct booking requests from residents.
+              {tx(
+                "Direct booking requests from residents.",
+                "Direktang booking request mula sa mga residente.",
+                "Diretso nga booking request gikan sa mga residente.",
+              )}
             </p>
             {pending.length ? (
               <ul className="space-y-2.5">
@@ -261,45 +322,80 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             ) : (
               <EmptyState
                 icon={<Inbox className="size-6" />}
-                title="All caught up"
-                body="New booking requests will appear here."
+                title={tx("All caught up", "Nacheck na lahat", "Nahuman na tanan")}
+                body={tx(
+                  "New booking requests will appear here.",
+                  "Lalabas dito ang mga bagong booking request.",
+                  "Makita dinhi ang mga bag-ong booking request.",
+                )}
               />
             )}
           </section>
 
           <section className="rounded-2xl border bg-card p-5 shadow-soft">
             <SectionHeader
-              title="My Jobs"
+              title={tx("My Jobs", "Aking Trabaho", "Akong Trabaho")}
               action={
                 <Link to="/my-jobs" className={subtleLinkClass}>
-                  View all
+                  {tx("View all", "Tingnan lahat", "Tan-awa tanan")}
                 </Link>
               }
             />
             <p className="text-sm text-muted-foreground">
-              {upcoming.length} active/upcoming · {applications.length} application
-              {applications.length === 1 ? "" : "s"} sent
+              {tx(
+                `${upcoming.length} active/upcoming · ${applications.length} application${applications.length === 1 ? "" : "s"} sent`,
+                `${upcoming.length} aktibo/darating · ${applications.length} aplikasyong naipasa`,
+                `${upcoming.length} aktibo/umaabot · ${applications.length} aplikasyon napadala`,
+              )}
             </p>
             <Button asChild size="sm" variant="soft" className="mt-3 w-full">
-              <Link to="/my-jobs">Open Job Management</Link>
+              <Link to="/my-jobs">
+                {tx("Open Job Management", "Pamahalaan ang Trabaho", "Ablihi ang Akong Trabaho")}
+              </Link>
             </Button>
           </section>
 
           {plans.includes("worker") ? (
             <section className="rounded-2xl bg-gold-sheen p-5 text-gold-foreground shadow-soft">
               <p className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide">
-                <TrendingUp className="size-4" aria-hidden /> Worker Pro · Earnings Insights (Demo)
+                <TrendingUp className="size-4" aria-hidden />{" "}
+                {tx(
+                  "Worker Pro · Earnings Insights (Demo)",
+                  "Worker Pro · Buod ng Kita (Demo)",
+                  "Worker Pro · Kita Insights (Demo)",
+                )}
               </p>
               <p className="mt-2 text-3xl font-extrabold text-foreground">₱18,450</p>
-              <p className="text-sm">This month · up 12% vs last month in {barangayName(p.barangayId)}</p>
-              <Link to="/pro" className={cn(subtleLinkClass, "mt-2 text-xs font-bold text-inherit underline hover:text-foreground")}>
-                Manage Worker Pro →
+              <p className="text-sm">
+                {tx(
+                  `This month · up 12% vs last month in ${barangayName(p.barangayId)}`,
+                  `Ngayong buwan · mas mataas nang 12% kaysa nakaraang buwan sa ${barangayName(p.barangayId)}`,
+                  `Karong bulana · mas taas og 12% kaysa miaging bulan sa ${barangayName(p.barangayId)}`,
+                )}
+              </p>
+              <Link
+                to="/pro"
+                className={cn(
+                  subtleLinkClass,
+                  "mt-2 text-xs font-bold text-inherit underline hover:text-foreground",
+                )}
+              >
+                {tx(
+                  "Manage Worker Pro →",
+                  "Pamahalaan ang Worker Pro →",
+                  "Dumalaa ang Worker Pro →",
+                )}
               </Link>
             </section>
           ) : (
             <Button asChild variant="gold" className="w-full">
               <Link to="/pro">
-                <Crown /> Explore GAW Worker Pro
+                <Crown />{" "}
+                {tx(
+                  "Explore GAW Worker Pro",
+                  "Tuklasin ang GAW Worker Pro",
+                  "Tan-awa ang GAW Worker Pro",
+                )}
               </Link>
             </Button>
           )}

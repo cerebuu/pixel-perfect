@@ -16,8 +16,9 @@ import { LiveJobSharingCard } from "@/components/gaw/GawMap";
 import { filterTabPillClass, subtleLinkClass } from "@/components/gaw/interactions";
 import { Avatar, EmptyState, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
-import { STATUS_LABEL, type BookingAction } from "@/lib/gaw/bookings";
+import { type BookingAction } from "@/lib/gaw/bookings";
 import { barangayName, WORKERS } from "@/lib/gaw/data";
+import { useI18n } from "@/lib/gaw/i18n";
 import { formatPeso, useGaw, type Booking, type BookingStatus } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
@@ -30,25 +31,23 @@ export const Route = createFileRoute("/bookings")({
       { property: "og:description", content: "Track your booking requests with nearby workers." },
     ],
   }),
-  component: () => (
-    <AppLayout mode="hire" title="My Bookings">
-      <BookingsList />
-    </AppLayout>
-  ),
+  component: BookingsPage,
 });
 
-const FILTERS: { key: BookingStatus | "all"; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "pending", label: "Pending" },
-  { key: "confirmed", label: "Accepted" },
-  { key: "in_progress", label: "In Progress" },
-  { key: "awaiting_confirmation", label: "Awaiting Confirmation" },
-  { key: "completed", label: "Completed" },
-  { key: "cancelled", label: "Cancelled" },
-  { key: "declined", label: "Declined" },
-];
+function BookingsPage() {
+  const { tx } = useI18n();
+  return (
+    <AppLayout mode="hire" title={tx("My Bookings", "Mga Booking Ko", "Akong mga Booking")}>
+      <BookingsList />
+    </AppLayout>
+  );
+}
 
-function resolveWorkerDisplay(b: Booking, workerSkill?: string) {
+function resolveWorkerDisplay(
+  b: Booking,
+  workerSkill: string | undefined,
+  tx: (en: string, fil: string, ceb: string) => string,
+) {
   const w = WORKERS.find((x) => x.id === b.workerId);
   if (w) {
     return {
@@ -62,7 +61,9 @@ function resolveWorkerDisplay(b: Booking, workerSkill?: string) {
   const fallback = WORKERS[0]!;
   return {
     id: fallback.id,
-    name: workerSkill ? `Assigned Worker (${workerSkill})` : `${fallback.name} (Synced Worker)`,
+    name: workerSkill
+      ? `${tx("Assigned Worker", "Nakatalagang Manggagawa", "Natudlo nga Trabahante")} (${workerSkill})`
+      : `${fallback.name} (${tx("Synced Worker", "Synced na Manggagawa", "Synced nga Trabahante")})`,
     initials: "WK",
     skill: workerSkill ?? b.service,
     isLinkable: false,
@@ -71,7 +72,22 @@ function resolveWorkerDisplay(b: Booking, workerSkill?: string) {
 
 function BookingsList() {
   const { bookings, bookingAction, workerProfile } = useGaw();
+  const { locale, tx, statusLabel } = useI18n();
   const [filter, setFilter] = useState<BookingStatus | "all">("all");
+
+  const localizedFilters: { key: BookingStatus | "all"; label: string }[] = [
+    { key: "all", label: tx("All", "Lahat", "Tanan") },
+    { key: "pending", label: tx("Pending", "Pending", "Pending") },
+    { key: "confirmed", label: tx("Accepted", "Tinanggap", "Gidawat") },
+    { key: "in_progress", label: tx("In Progress", "Ginagawa Na", "Ginahimo Na") },
+    {
+      key: "awaiting_confirmation",
+      label: tx("Awaiting Confirmation", "Naghihintay ng Kumpirmasyon", "Naghulat sa Kumpirmasyon"),
+    },
+    { key: "completed", label: tx("Completed", "Tapos Na", "Nahuman Na") },
+    { key: "cancelled", label: tx("Cancelled", "Kinansela", "Gikansela") },
+    { key: "declined", label: tx("Declined", "Tinanggihan", "Gibalibaran") },
+  ];
 
   const list = bookings.filter((b) => filter === "all" || b.status === filter);
 
@@ -85,21 +101,39 @@ function BookingsList() {
       {/* Shared state note */}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-card px-4 py-3 text-xs text-muted-foreground shadow-soft">
         <span>
-          <strong>Shared Booking State:</strong> Status changes in Worker{" "}
+          <strong>
+            {tx(
+              "Shared Booking State:",
+              "Pinagsamang Estado ng Booking:",
+              "Gipaambit nga Estado sa Booking:",
+            )}
+          </strong>{" "}
+          {tx(
+            "Status changes in Worker",
+            "Ang pagbabago ng status sa",
+            "Ang kausaban sa status sa",
+          )}{" "}
           <Link to="/my-jobs" className={cn(subtleLinkClass, "inline text-[length:inherit]")}>
-            My Jobs
+            {tx("My Jobs", "Aking Trabaho", "Akong Trabaho")}
           </Link>{" "}
-          immediately update here.
+          {tx("immediately update here.", "ay agad na makikita rito.", "makita dayon dinhi.")}
         </span>
         <Button asChild size="sm" variant="soft">
-          <Link to="/find">+ Request New Booking</Link>
+          <Link to="/find">
+            {tx("+ Request New Booking", "+ Mag-book ng Bago", "+ Pag-book og Bag-o")}
+          </Link>
         </Button>
       </div>
 
       {/* Filter pills */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1.5" role="group" aria-label="Filter by status">
-        {FILTERS.map((f) => {
-          const n = f.key === "all" ? bookings.length : bookings.filter((b) => b.status === f.key).length;
+      <div
+        className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1.5"
+        role="group"
+        aria-label={tx("Filter by status", "I-filter ayon sa status", "I-filter base sa status")}
+      >
+        {localizedFilters.map((f) => {
+          const n =
+            f.key === "all" ? bookings.length : bookings.filter((b) => b.status === f.key).length;
           return (
             <button
               key={f.key}
@@ -120,23 +154,44 @@ function BookingsList() {
       {list.length === 0 ? (
         <EmptyState
           icon={<CalendarCheck className="size-6" />}
-          title={filter === "all" ? "No bookings yet" : `No ${STATUS_LABEL[filter]?.toLowerCase() ?? filter} bookings`}
-          body="Find a nearby worker and send a booking request — it will show up here."
+          title={
+            filter === "all"
+              ? tx("No bookings yet", "Wala pang mga booking", "Wala pay mga booking")
+              : tx(
+                  `No ${statusLabel(filter).toLowerCase()} bookings`,
+                  `Walang booking na ${statusLabel(filter).toLowerCase()}`,
+                  `Walay booking nga ${statusLabel(filter).toLowerCase()}`,
+                )
+          }
+          body={tx(
+            "Find a nearby worker and send a booking request — it will show up here.",
+            "Maghanap ng manggagawa sa malapit at magpadala ng booking request — lalabas ito rito.",
+            "Pangita og trabahante sa duol ug pagpadala og booking request — makita kana dinhi.",
+          )}
           action={
             <Button asChild>
-              <Link to="/find">Open Nearby Finder</Link>
+              <Link to="/find">
+                {tx("Open Nearby Finder", "Buksan ang Paghahanap", "Ablihi ang Pangita")}
+              </Link>
             </Button>
           }
         />
       ) : (
         <ul className="space-y-3">
           {list.map((b) => {
-            const w = resolveWorkerDisplay(b, workerProfile?.skill);
-            const rateDisplay = b.rateText ?? (b.budget ? formatPeso(b.budget) : "Quote requested");
+            const w = resolveWorkerDisplay(b, workerProfile?.skill, tx);
+            const rateDisplay =
+              b.rateText ??
+              (b.budget
+                ? formatPeso(b.budget)
+                : tx("Quote requested", "Humihingi ng presyo", "Nangayo og presyo"));
             const locDisplay = b.location?.label ?? barangayName(b.barangayId);
 
             return (
-              <li key={b.id} className="animate-fade-up rounded-2xl border bg-card p-4 shadow-soft md:p-5">
+              <li
+                key={b.id}
+                className="animate-fade-up rounded-2xl border bg-card p-4 shadow-soft md:p-5"
+              >
                 <div className="flex items-start gap-3">
                   <Avatar initials={w.initials} />
                   <div className="min-w-0 flex-1">
@@ -157,15 +212,19 @@ function BookingsList() {
                           <p className="font-bold">{w.name}</p>
                         )}
                         <p className="text-sm font-semibold text-primary">{b.service}</p>
-                        <p className="text-xs text-muted-foreground">Employer: {b.client.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {tx("Employer:", "Nagpapa-hire:", "Nagpa-hire:")} {b.client.name}
+                        </p>
                       </div>
                       <StatusBadge status={b.status} />
                     </div>
-                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{b.description}</p>
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                      {b.description}
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <CalendarDays className="size-3.5" aria-hidden />
-                        {new Date(b.date + "T00:00").toLocaleDateString("en-PH", {
+                        {new Date(b.date + "T00:00").toLocaleDateString(locale, {
                           month: "short",
                           day: "numeric",
                         })}{" "}
@@ -194,16 +253,37 @@ function BookingsList() {
                 {b.status === "awaiting_confirmation" && (
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-secondary/60 p-3.5">
                     <div className="text-xs">
-                      <p className="font-bold text-foreground">Worker marked this job as finished</p>
+                      <p className="font-bold text-foreground">
+                        {tx(
+                          "Worker marked this job as finished",
+                          "Minarkahan ng manggagawa na tapos na ito",
+                          "Gimarkahan sa trabahante nga human na kini",
+                        )}
+                      </p>
                       <p className="text-muted-foreground">
-                        Confirm completion to move this booking to Completed.
+                        {tx(
+                          "Confirm completion to move this booking to Completed.",
+                          "Kumpirmahin para mailipat ang booking sa Tapos Na.",
+                          "Kumpirmaha aron mabalhin ang booking sa Nahuman Na.",
+                        )}
                       </p>
                     </div>
                     <Button
                       size="sm"
-                      onClick={() => act(b.id, "confirm", "Confirmed job completion!")}
+                      onClick={() =>
+                        act(
+                          b.id,
+                          "confirm",
+                          tx(
+                            "Confirmed job completion!",
+                            "Nakumpirma ang pagtatapos!",
+                            "Nakumpirma ang pagkahuman!",
+                          ),
+                        )
+                      }
                     >
-                      <CheckCircle2 className="size-4" /> Confirm Completion
+                      <CheckCircle2 className="size-4" />{" "}
+                      {tx("Confirm Completion", "Kumpirmahin na Tapos", "Kumpirmaha nga Human Na")}
                     </Button>
                   </div>
                 )}
@@ -213,33 +293,79 @@ function BookingsList() {
                   <div className="mt-4 rounded-xl bg-muted p-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-xs font-semibold text-muted-foreground">
-                        Respond in{" "}
-                        <Link to="/my-jobs" className={cn(subtleLinkClass, "inline text-[length:inherit] underline")}>
-                          Worker My Jobs
+                        {tx("Respond in", "Sumagot sa", "Tubag sa")}{" "}
+                        <Link
+                          to="/my-jobs"
+                          className={cn(subtleLinkClass, "inline text-[length:inherit] underline")}
+                        >
+                          {tx(
+                            "Worker My Jobs",
+                            "Aking Trabaho ng Manggagawa",
+                            "Akong Trabaho sa Trabahante",
+                          )}
                         </Link>{" "}
-                        or simulate worker response:
+                        {tx(
+                          "or simulate worker response:",
+                          "o i-simulate ang sagot ng manggagawa:",
+                          "o i-simulate ang tubag sa trabahante:",
+                        )}
                       </p>
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => act(b.id, "cancel", "Booking cancelled")}
+                        onClick={() =>
+                          act(
+                            b.id,
+                            "cancel",
+                            tx(
+                              "Booking cancelled",
+                              "Kinansela ang booking",
+                              "Gikansela ang booking",
+                            ),
+                          )
+                        }
                       >
-                        <XCircle className="size-3.5" /> Cancel Booking
+                        <XCircle className="size-3.5" />{" "}
+                        {tx("Cancel Booking", "Kanselahin ang Booking", "Kanselahon ang Booking")}
                       </Button>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Button
                         size="sm"
-                        onClick={() => act(b.id, "accept", `${w.name} accepted the booking`)}
+                        onClick={() =>
+                          act(
+                            b.id,
+                            "accept",
+                            tx(
+                              `${w.name} accepted the booking`,
+                              `Tinanggap ni ${w.name} ang booking`,
+                              `Gidawat ni ${w.name} ang booking`,
+                            ),
+                          )
+                        }
                       >
-                        Worker Accepts
+                        {tx("Worker Accepts", "Tinanggap ng Manggagawa", "Gidawat sa Trabahante")}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => act(b.id, "decline", `${w.name} declined this booking`)}
+                        onClick={() =>
+                          act(
+                            b.id,
+                            "decline",
+                            tx(
+                              `${w.name} declined this booking`,
+                              `Tinanggihan ni ${w.name} ang booking`,
+                              `Gibalibaran ni ${w.name} ang booking`,
+                            ),
+                          )
+                        }
                       >
-                        Worker Declines
+                        {tx(
+                          "Worker Declines",
+                          "Tinanggihan ng Manggagawa",
+                          "Gibalibaran sa Trabahante",
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -248,22 +374,51 @@ function BookingsList() {
                 {b.status === "confirmed" && (
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                     <span className="text-xs text-muted-foreground">
-                      Accepted & scheduled. Worker can start the job from My Jobs.
+                      {tx(
+                        "Accepted & scheduled. Worker can start the job from My Jobs.",
+                        "Tinanggap at naka-iskedyul na. Maaaring simulan ng manggagawa mula sa Aking Trabaho.",
+                        "Gidawat ug naka-iskedyul na. Pwede sugdan sa trabahante gikan sa Akong Trabaho.",
+                      )}
                     </span>
                     <div className="flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => act(b.id, "cancel", "Booking cancelled")}
+                        onClick={() =>
+                          act(
+                            b.id,
+                            "cancel",
+                            tx(
+                              "Booking cancelled",
+                              "Kinansela ang booking",
+                              "Gikansela ang booking",
+                            ),
+                          )
+                        }
                       >
-                        Cancel Booking
+                        {tx("Cancel Booking", "Kanselahin", "Kanselahon")}
                       </Button>
                       <Button
                         size="sm"
                         variant="soft"
-                        onClick={() => act(b.id, "start", "Worker started the job (In Progress)")}
+                        onClick={() =>
+                          act(
+                            b.id,
+                            "start",
+                            tx(
+                              "Worker started the job (In Progress)",
+                              "Sinimulan na ang trabaho",
+                              "Gisugdan na ang trabaho",
+                            ),
+                          )
+                        }
                       >
-                        <Play className="size-3.5" /> Simulate: Worker Starts Job
+                        <Play className="size-3.5" />{" "}
+                        {tx(
+                          "Simulate: Worker Starts Job",
+                          "I-simulate: Simulan ang Trabaho",
+                          "I-simulate: Sugdi ang Trabaho",
+                        )}
                       </Button>
                     </div>
                   </div>
@@ -272,29 +427,50 @@ function BookingsList() {
                 {b.status === "in_progress" && (
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                     <span className="text-xs text-muted-foreground">
-                      Job is currently in progress.
+                      {tx(
+                        "Job is currently in progress.",
+                        "Kasalukuyang ginagawa ang trabaho.",
+                        "Ginahimo karon ang trabaho.",
+                      )}
                     </span>
                     <Button
                       size="sm"
                       variant="soft"
                       onClick={() =>
-                        act(b.id, "finish", "Worker marked job finished — now awaiting your confirmation")
+                        act(
+                          b.id,
+                          "finish",
+                          tx(
+                            "Worker marked job finished — now awaiting your confirmation",
+                            "Minarkahang tapos — naghihintay ng iyong kumpirmasyon",
+                            "Gimarkahan nga human na — naghulat sa imong kumpirmasyon",
+                          ),
+                        )
                       }
                     >
-                      Simulate: Worker Marks Completed
+                      {tx(
+                        "Simulate: Worker Marks Completed",
+                        "I-simulate: Markahang Tapos Na",
+                        "I-simulate: Markahi nga Human Na",
+                      )}
                     </Button>
                   </div>
                 )}
 
-                {(b.status === "completed" || b.status === "declined" || b.status === "cancelled") && w.isLinkable && (
-                  <div className="mt-4 flex justify-end">
-                    <Button asChild size="sm" variant="outline">
-                      <Link to="/book/$workerId" params={{ workerId: w.id }}>
-                        {b.status === "completed" ? "Book again" : "Try again"}
-                      </Link>
-                    </Button>
-                  </div>
-                )}
+                {(b.status === "completed" ||
+                  b.status === "declined" ||
+                  b.status === "cancelled") &&
+                  w.isLinkable && (
+                    <div className="mt-4 flex justify-end">
+                      <Button asChild size="sm" variant="outline">
+                        <Link to="/book/$workerId" params={{ workerId: w.id }}>
+                          {b.status === "completed"
+                            ? tx("Book again", "I-book muli", "I-book pag-usab")
+                            : tx("Try again", "Subukan muli", "Sulayi pag-usab")}
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
               </li>
             );
           })}

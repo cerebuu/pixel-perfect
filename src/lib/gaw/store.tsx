@@ -1,6 +1,20 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { BARANGAYS, DEMO_PERSONAS, JOBS, nearestBarangay, WORKERS } from "./data";
-import { applyAction, canWithdraw, type ApplicationStatus, type BookingAction, type BookingStatus } from "./bookings";
+import {
+  applyAction,
+  canWithdraw,
+  type ApplicationStatus,
+  type BookingAction,
+  type BookingStatus,
+} from "./bookings";
 import {
   DEFAULT_REJECTION_REASON,
   DEFAULT_RESUBMISSION_REASON,
@@ -146,14 +160,100 @@ function seedBookings(me: Party): Booking[] {
   const base = { workerId: ME, location: null, createdAt: now } as const;
   return [
     // Working side: requests from fictional demo residents to the user's worker profile.
-    { ...base, id: "r-1", side: "working", client: persona(0), service: "Leaking kitchen sink", description: "Water drips under the sink cabinet whenever we use the faucet.", date: isoDay(1), time: "09:00", barangayId: "bajada", budget: 900, status: "pending" },
-    { ...base, id: "r-2", side: "working", client: persona(1), service: "Install shelves in garage", description: "Two wall shelves for tools. I already have the brackets.", date: isoDay(3), time: "13:00", barangayId: "buhangin", budget: null, status: "pending" },
-    { ...base, id: "r-3", side: "working", client: persona(2), service: "Fix loose door hinges", description: "Bedroom and bathroom doors don't close properly.", date: isoDay(5), time: "10:00", barangayId: "matina", budget: 600, status: "pending" },
-    { ...base, id: "r-4", side: "working", client: persona(3), service: "Replace broken window latch", description: "Living room window latch snapped off; needs a replacement.", date: isoDay(2), time: "15:00", barangayId: "poblacion", budget: 500, status: "confirmed" },
-    { ...base, id: "r-5", side: "working", client: persona(4), service: "Mount curtain rods", description: "Three curtain rods in the bedrooms.", date: isoDay(-9), time: "10:00", barangayId: "bajada", budget: 750, status: "completed" },
-    { ...base, id: "r-6", side: "working", client: persona(1), service: "Patch ceiling leak", description: "Cancelled by the resident — the landlord fixed it.", date: isoDay(-4), time: "08:00", barangayId: "buhangin", budget: 1200, status: "cancelled" },
+    {
+      ...base,
+      id: "r-1",
+      side: "working",
+      client: persona(0),
+      service: "Leaking kitchen sink",
+      description: "Water drips under the sink cabinet whenever we use the faucet.",
+      date: isoDay(1),
+      time: "09:00",
+      barangayId: "bajada",
+      budget: 900,
+      status: "pending",
+    },
+    {
+      ...base,
+      id: "r-2",
+      side: "working",
+      client: persona(1),
+      service: "Install shelves in garage",
+      description: "Two wall shelves for tools. I already have the brackets.",
+      date: isoDay(3),
+      time: "13:00",
+      barangayId: "buhangin",
+      budget: null,
+      status: "pending",
+    },
+    {
+      ...base,
+      id: "r-3",
+      side: "working",
+      client: persona(2),
+      service: "Fix loose door hinges",
+      description: "Bedroom and bathroom doors don't close properly.",
+      date: isoDay(5),
+      time: "10:00",
+      barangayId: "matina",
+      budget: 600,
+      status: "pending",
+    },
+    {
+      ...base,
+      id: "r-4",
+      side: "working",
+      client: persona(3),
+      service: "Replace broken window latch",
+      description: "Living room window latch snapped off; needs a replacement.",
+      date: isoDay(2),
+      time: "15:00",
+      barangayId: "poblacion",
+      budget: 500,
+      status: "confirmed",
+    },
+    {
+      ...base,
+      id: "r-5",
+      side: "working",
+      client: persona(4),
+      service: "Mount curtain rods",
+      description: "Three curtain rods in the bedrooms.",
+      date: isoDay(-9),
+      time: "10:00",
+      barangayId: "bajada",
+      budget: 750,
+      status: "completed",
+    },
+    {
+      ...base,
+      id: "r-6",
+      side: "working",
+      client: persona(1),
+      service: "Patch ceiling leak",
+      description: "Cancelled by the resident — the landlord fixed it.",
+      date: isoDay(-4),
+      time: "08:00",
+      barangayId: "buhangin",
+      budget: 1200,
+      status: "cancelled",
+    },
     // Hiring side: a past booking the user made as an employer.
-    { id: "b-seed", side: "hiring", workerId: "w-joy", client: me, service: "Cleaning", description: "Deep clean before family visit.", date: isoDay(-21), time: "09:00", barangayId: "bajada", location: null, budget: 1500, status: "completed", createdAt: now - 1000 * 60 * 60 * 24 * 21 },
+    {
+      id: "b-seed",
+      side: "hiring",
+      workerId: "w-joy",
+      client: me,
+      service: "Cleaning",
+      description: "Deep clean before family visit.",
+      date: isoDay(-21),
+      time: "09:00",
+      barangayId: "bajada",
+      location: null,
+      budget: 1500,
+      status: "completed",
+      createdAt: now - 1000 * 60 * 60 * 24 * 21,
+    },
   ];
 }
 
@@ -168,7 +268,12 @@ export function initialsOf(name: string) {
 }
 
 function freshAccountState(account: Account): GawState {
-  return { ...initialState, account, signedIn: true, bookings: seedBookings({ name: account.name, initials: initialsOf(account.name) }) };
+  return {
+    ...initialState,
+    account,
+    signedIn: true,
+    bookings: seedBookings({ name: account.name, initials: initialsOf(account.name) }),
+  };
 }
 
 /** Where distances are measured from when hiring. */
@@ -211,13 +316,64 @@ interface GawContext extends GawState {
   withdrawApplication: (id: string) => void;
   simulateHire: (applicationId: string) => string | null;
   setPlan: (p: ProPlan, on: boolean) => void;
-  submitVerification: (target: "identity" | CredentialKey, doc: Omit<VerifDoc, "status" | "submittedAt">) => void;
-  setVerificationStatus: (target: "identity" | CredentialKey, s: VerifStatus, reason?: string) => void;
+  submitVerification: (
+    target: "identity" | CredentialKey,
+    doc: Omit<VerifDoc, "status" | "submittedAt">,
+  ) => void;
+  setVerificationStatus: (
+    target: "identity" | CredentialKey,
+    s: VerifStatus,
+    reason?: string,
+  ) => void;
   removeVerification: (target: "identity" | CredentialKey) => void;
   resetDemo: () => void;
 }
 
 const Ctx = createContext<GawContext | null>(null);
+
+export function clearSessionDrafts() {
+  if (typeof window === "undefined") return;
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < window.sessionStorage.length; i++) {
+      const key = window.sessionStorage.key(i);
+      if (key && (key.startsWith("gaw:booking-draft:") || key.startsWith("gaw:job-draft:"))) {
+        toRemove.push(key);
+      }
+    }
+    for (const k of toRemove) {
+      window.sessionStorage.removeItem(k);
+    }
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+export function sanitizeLoadedState(parsed: unknown, fallback: GawState): GawState {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return fallback;
+  }
+  const obj = parsed as Partial<GawState>;
+  return {
+    ...fallback,
+    ...obj,
+    bookings: Array.isArray(obj.bookings) ? obj.bookings : fallback.bookings,
+    applications: Array.isArray(obj.applications) ? obj.applications : fallback.applications,
+    plans: Array.isArray(obj.plans) ? obj.plans : fallback.plans,
+    verification:
+      obj.verification && typeof obj.verification === "object" && !Array.isArray(obj.verification)
+        ? {
+            identity: obj.verification.identity ?? fallback.verification.identity,
+            credentials:
+              obj.verification.credentials &&
+              typeof obj.verification.credentials === "object" &&
+              !Array.isArray(obj.verification.credentials)
+                ? obj.verification.credentials
+                : fallback.verification.credentials,
+          }
+        : fallback.verification,
+  };
+}
 
 export function GawProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<GawState>(initialState);
@@ -226,7 +382,10 @@ export function GawProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setState({ ...initialState, ...JSON.parse(raw) });
+      if (raw) {
+        const parsed: unknown = JSON.parse(raw);
+        setState(sanitizeLoadedState(parsed, initialState));
+      }
     } catch {
       /* corrupted demo data: start fresh */
     }
@@ -243,22 +402,37 @@ export function GawProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       hydrated,
-      signUp: (a) => patch(() => freshAccountState({ ...a, isDemo: false })),
+      signUp: (a) => {
+        clearSessionDrafts();
+        patch(() => freshAccountState({ ...a, isDemo: false }));
+      },
       logIn: (email) => {
-        const ok = !!state.account && state.account.email.toLowerCase() === email.trim().toLowerCase();
+        const ok =
+          !!state.account && state.account.email.toLowerCase() === email.trim().toLowerCase();
         if (ok) patch((s) => ({ ...s, signedIn: true, mode: null }));
         return ok;
       },
-      demoLogin: () =>
+      demoLogin: () => {
+        clearSessionDrafts();
         patch((s) =>
           s.account?.isDemo
             ? { ...s, signedIn: true, mode: null }
-            : freshAccountState({ name: "Juan Dela Cruz", email: "judge@gaw.demo", mobile: "09171234567", isDemo: true }),
-        ),
-      logOut: () => patch((s) => ({ ...s, signedIn: false, mode: null })),
+            : freshAccountState({
+                name: "Juan Dela Cruz",
+                email: "judge@gaw.demo",
+                mobile: "09171234567",
+                isDemo: true,
+              }),
+        );
+      },
+      logOut: () => {
+        clearSessionDrafts();
+        patch((s) => ({ ...s, signedIn: false, mode: null }));
+      },
       setMode: (mode) => patch((s) => ({ ...s, mode })),
       setLocation: (locationId) => patch((s) => ({ ...s, locationId, serviceLocation: null })),
-      setServiceLocation: (l) => patch((s) => ({ ...s, serviceLocation: l, locationId: nearestBarangay(l).id })),
+      setServiceLocation: (l) =>
+        patch((s) => ({ ...s, serviceLocation: l, locationId: nearestBarangay(l).id })),
       saveWorkerProfile: (workerProfile) => patch((s) => ({ ...s, workerProfile })),
       setAvailable: (available) => patch((s) => ({ ...s, available })),
       addBooking: (b) => {
@@ -266,8 +440,16 @@ export function GawProvider({ children }: { children: ReactNode }) {
         const id = uid("b");
         patch((s) => {
           if (!identityVerified(s.verification)) return s;
-          const me = s.account ? { name: s.account.name, initials: initialsOf(s.account.name) } : { name: "You", initials: "ME" };
-          return { ...s, bookings: [{ ...b, id, side: "hiring", client: me, status: "pending", createdAt: Date.now() }, ...s.bookings] };
+          const me = s.account
+            ? { name: s.account.name, initials: initialsOf(s.account.name) }
+            : { name: "You", initials: "ME" };
+          return {
+            ...s,
+            bookings: [
+              { ...b, id, side: "hiring", client: me, status: "pending", createdAt: Date.now() },
+              ...s.bookings,
+            ],
+          };
         });
         return id;
       },
@@ -279,14 +461,22 @@ export function GawProvider({ children }: { children: ReactNode }) {
           const existing = s.applications.find((x) => x.jobId === a.jobId);
           if (existing && existing.status !== "withdrawn") return s;
           const rest = s.applications.filter((x) => x.jobId !== a.jobId);
-          return { ...s, applications: [{ ...a, id: uid("a"), status: "submitted", createdAt: Date.now() }, ...rest] };
+          return {
+            ...s,
+            applications: [
+              { ...a, id: uid("a"), status: "submitted", createdAt: Date.now() },
+              ...rest,
+            ],
+          };
         });
         return true;
       },
       withdrawApplication: (id) =>
         patch((s) => ({
           ...s,
-          applications: s.applications.map((x) => (x.id === id && canWithdraw(x.status) ? { ...x, status: "withdrawn" } : x)),
+          applications: s.applications.map((x) =>
+            x.id === id && canWithdraw(x.status) ? { ...x, status: "withdrawn" } : x,
+          ),
         })),
       simulateHire: (applicationId) => {
         const app = state.applications.find((x) => x.id === applicationId);
@@ -295,7 +485,9 @@ export function GawProvider({ children }: { children: ReactNode }) {
         const id = uid("r");
         patch((s) => ({
           ...s,
-          applications: s.applications.map((x) => (x.id === applicationId ? { ...x, status: "hired" } : x)),
+          applications: s.applications.map((x) =>
+            x.id === applicationId ? { ...x, status: "hired" } : x,
+          ),
           bookings: [
             {
               id,
@@ -320,17 +512,32 @@ export function GawProvider({ children }: { children: ReactNode }) {
         return id;
       },
       setPlan: (p, on) =>
-        patch((s) => ({ ...s, plans: on ? Array.from(new Set([...s.plans, p])) : s.plans.filter((x) => x !== p) })),
+        patch((s) => ({
+          ...s,
+          plans: on ? Array.from(new Set([...s.plans, p])) : s.plans.filter((x) => x !== p),
+        })),
       submitVerification: (target, doc) =>
         patch((s) => {
-          const full: VerifDoc = { ...doc, status: "pending", reason: undefined, submittedAt: Date.now() };
+          const full: VerifDoc = {
+            ...doc,
+            status: "pending",
+            reason: undefined,
+            submittedAt: Date.now(),
+          };
           return target === "identity"
             ? { ...s, verification: { ...s.verification, identity: full } }
-            : { ...s, verification: { ...s.verification, credentials: { ...s.verification.credentials, [target]: full } } };
+            : {
+                ...s,
+                verification: {
+                  ...s.verification,
+                  credentials: { ...s.verification.credentials, [target]: full },
+                },
+              };
         }),
       setVerificationStatus: (target, st, customReason) =>
         patch((s) => {
-          const cur = target === "identity" ? s.verification.identity : s.verification.credentials[target];
+          const cur =
+            target === "identity" ? s.verification.identity : s.verification.credentials[target];
           if (!cur || cur.status !== "pending") return s;
           const resolvedReason =
             st === "rejected"
@@ -341,16 +548,24 @@ export function GawProvider({ children }: { children: ReactNode }) {
           const next: VerifDoc = { ...cur, status: st, reason: resolvedReason };
           return target === "identity"
             ? { ...s, verification: { ...s.verification, identity: next } }
-            : { ...s, verification: { ...s.verification, credentials: { ...s.verification.credentials, [target]: next } } };
+            : {
+                ...s,
+                verification: {
+                  ...s.verification,
+                  credentials: { ...s.verification.credentials, [target]: next },
+                },
+              };
         }),
       removeVerification: (target) =>
         patch((s) => {
-          if (target === "identity") return { ...s, verification: { ...s.verification, identity: null } };
+          if (target === "identity")
+            return { ...s, verification: { ...s.verification, identity: null } };
           const credentials = { ...s.verification.credentials };
           delete credentials[target];
           return { ...s, verification: { ...s.verification, credentials } };
         }),
       resetDemo: () => {
+        clearSessionDrafts();
         window.localStorage.removeItem(STORAGE_KEY);
         setState(initialState);
       },

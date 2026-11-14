@@ -10,9 +10,9 @@ export type GAWBrandSize = "sm" | "md" | "lg" | "xl";
 export interface GAWBrandProps {
   /**
    * - `icon`: Official green G symbol only (compact headers, loading state, badges)
-   * - `compact`: [G Icon] GAW lockup for navigation bars & application headers (32–36px icon)
-   * - `full`: [G Icon] GAW primary lockup for authentication & feature headers (44–56px icon)
-   * - `expanded`: [G Icon] GAW + "Grab a Work" secondary lockup for welcome, onboarding & hero sections
+   * - `compact`: [G Icon] GAW lockup for compact bars & inline brand references (32–36px icon)
+   * - `full`: [G Icon] GAW primary lockup without subtitle (44–48px icon)
+   * - `expanded`: [G Icon] GAW + "Grab a Work" lockup for headers, auth, & hero sections
    */
   variant?: GAWBrandVariant | undefined;
   size?: GAWBrandSize | undefined;
@@ -35,42 +35,46 @@ const DEFAULT_SIZE_BY_VARIANT: Record<GAWBrandVariant, GAWBrandSize> = {
 const ICON_DIMENSIONS: Record<GAWBrandSize, { px: number; boxClass: string; radiusClass: string }> =
   {
     sm: {
-      px: 42,
-      boxClass: "size-9 sm:size-10 md:size-[42px]",
+      px: 36,
+      boxClass: "aspect-square size-8 sm:size-[34px] md:size-9",
+      radiusClass: "rounded-[9px] sm:rounded-[10px]",
+    },
+    md: {
+      px: 40,
+      boxClass: "aspect-square size-9 sm:size-[38px] md:size-10",
       radiusClass: "rounded-[10px] sm:rounded-[11px]",
     },
-    md: { px: 44, boxClass: "size-10 sm:size-11", radiusClass: "rounded-[11px] sm:rounded-[12px]" },
     lg: {
-      px: 52,
-      boxClass: "size-12 sm:size-[52px]",
-      radiusClass: "rounded-[13px] sm:rounded-[14px]",
+      px: 48,
+      boxClass: "aspect-square size-11 sm:size-[46px] md:size-12",
+      radiusClass: "rounded-[12px] md:rounded-[13px]",
     },
     xl: {
-      px: 60,
-      boxClass: "size-[54px] sm:size-[60px]",
-      radiusClass: "rounded-[14px] sm:rounded-[16px]",
+      px: 56,
+      boxClass: "aspect-square size-[50px] sm:size-[54px] md:size-14",
+      radiusClass: "rounded-[13px] sm:rounded-[14px] md:rounded-[15px]",
     },
   };
 
 const TITLE_CLASSES: Record<GAWBrandSize, string> = {
-  sm: "text-[1.2rem] leading-none tracking-[-0.03em]",
+  sm: "text-[1.1875rem] leading-none tracking-[-0.03em]",
   md: "text-[1.375rem] leading-none tracking-[-0.035em]",
   lg: "text-[1.65rem] leading-none tracking-[-0.04em]",
   xl: "text-[1.95rem] md:text-[2.1rem] leading-none tracking-[-0.04em]",
 };
 
 const SUBTITLE_CLASSES: Record<GAWBrandSize, string> = {
-  sm: "text-[0.65rem] tracking-[0.04em]",
-  md: "text-[0.72rem] tracking-[0.04em]",
-  lg: "text-xs tracking-[0.045em]",
-  xl: "text-[0.875rem] md:text-[0.95rem] tracking-[0.04em]",
+  sm: "mt-[3px] text-[0.6875rem] tracking-[0.035em]",
+  md: "mt-[3.5px] text-[0.72rem] tracking-[0.04em]",
+  lg: "mt-1 text-xs tracking-[0.045em]",
+  xl: "mt-1 text-[0.875rem] md:text-[0.95rem] tracking-[0.04em]",
 };
 
 const GAP_CLASSES: Record<GAWBrandSize, string> = {
-  sm: "gap-2.5",
-  md: "gap-3",
+  sm: "gap-2.5 sm:gap-3",
+  md: "gap-3 sm:gap-3.5",
   lg: "gap-3.5",
-  xl: "gap-4",
+  xl: "gap-3.5 sm:gap-4",
 };
 
 /**
@@ -91,12 +95,12 @@ export function GAWBrand({
   const iconElement = (
     <span
       className={cn(
-        "relative inline-flex shrink-0 overflow-hidden select-none",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden select-none",
         dim.boxClass,
         dim.radiusClass,
         onDeep
-          ? "ring-1 ring-white/20 shadow-[0_2px_10px_rgba(0,0,0,0.28)]"
-          : "ring-1 ring-black/10 dark:ring-white/20 shadow-[0_1px_4px_rgba(18,60,57,0.14)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.45)]",
+          ? "shadow-[0_2px_8px_rgba(0,0,0,0.24)]"
+          : "shadow-[0_1px_2px_rgba(18,60,57,0.12)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)]",
       )}
     >
       <img
@@ -105,7 +109,7 @@ export function GAWBrand({
         width={dim.px}
         height={dim.px}
         decoding="async"
-        className="size-full object-cover"
+        className="size-full object-contain"
       />
     </span>
   );
@@ -136,8 +140,15 @@ export function GAWBrand({
             GAW
           </span>
           {proBadge && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-gold px-2.5 py-0.5 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-gold-foreground shadow-2xs">
-              <Crown className="size-3" aria-hidden />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full bg-gold font-extrabold uppercase tracking-[0.08em] text-gold-foreground shadow-2xs",
+                resolvedSize === "sm"
+                  ? "px-2 py-[1px] text-[0.625rem]"
+                  : "px-2.5 py-0.5 text-[0.68rem]",
+              )}
+            >
+              <Crown className={resolvedSize === "sm" ? "size-2.5" : "size-3"} aria-hidden />
               Pro
             </span>
           )}
@@ -146,7 +157,7 @@ export function GAWBrand({
         {variant === "expanded" && (
           <span
             className={cn(
-              "mt-1 font-semibold leading-none",
+              "font-semibold leading-none",
               SUBTITLE_CLASSES[resolvedSize],
               onDeep ? "text-deep-muted" : "text-muted-foreground",
             )}

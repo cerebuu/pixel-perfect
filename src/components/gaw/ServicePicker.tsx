@@ -3,6 +3,7 @@ import { Check, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CATEGORIES, OTHER_CATEGORY, SKILL_SUGGESTIONS } from "@/lib/gaw/data";
+import { useI18n } from "@/lib/gaw/i18n";
 import { isPredefinedService, normalizeService, validateCustomService } from "@/lib/gaw/services";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +78,13 @@ export function ServicePicker({
       setSelectMode("custom");
       if (customText.trim()) {
         const err = validateCustomService(customText);
-        if (!err) onChange(normalizeService(customText), customDescription);
+        if (!err) {
+          onChange(normalizeService(customText), customDescription);
+        } else {
+          onChange("", customDescription);
+        }
+      } else {
+        onChange("", customDescription);
       }
       return;
     }
@@ -97,13 +104,17 @@ export function ServicePicker({
     onChange(clean, customDescription);
   };
 
-  const selectValue =
-    selectMode === "custom" || isCustomValue ? "__custom__" : value;
+  const selectValue = selectMode === "custom" || isCustomValue ? "__custom__" : value;
+
+  const { tx, translateCategory } = useI18n();
 
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <label htmlFor={id} className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <label
+          htmlFor={id}
+          className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
           {label}
         </label>
       )}
@@ -111,13 +122,20 @@ export function ServicePicker({
       {/* Searchable filter input + Category select */}
       <div className="space-y-2">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
           <Input
             id={`${id}-search`}
             type="search"
             value={searchFilter}
             onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="Filter categories or type a service (e.g. Motorcycle Mechanic)…"
+            placeholder={tx(
+              "Filter categories or type a service (e.g. Motorcycle Mechanic)…",
+              "Mag-filter ng kategorya o mag-type ng serbisyo (hal. Motorcycle Mechanic)…",
+              "I-filter ang kategorya o i-type ang serbisyo (pananglitan, Motorcycle Mechanic)…",
+            )}
             className="h-9 pl-8 text-xs"
             aria-label={`Search ${label}`}
           />
@@ -129,44 +147,74 @@ export function ServicePicker({
           value={selectValue}
           onChange={(e) => handleSelectChange(e.target.value)}
           aria-invalid={!!(error || customErr)}
+          aria-describedby={error ? `${id}-error` : customErr ? `${id}-custom-error` : undefined}
         >
           {includeAll && <option value="all">{allLabel}</option>}
           {filteredOptions.map((c) => (
             <option key={c} value={c}>
-              {c}
+              {translateCategory(c)}
             </option>
           ))}
-          {includeAll && <option value={OTHER_CATEGORY}>{OTHER_CATEGORY} (All custom skills)</option>}
-          {allowCustom && <option value="__custom__">Other — Enter custom service…</option>}
+          {includeAll && (
+            <option value={OTHER_CATEGORY}>
+              {tx(
+                `${OTHER_CATEGORY} (All custom skills)`,
+                `${OTHER_CATEGORY} (Lahat ng custom na kasanayan)`,
+                `${OTHER_CATEGORY} (Tanang custom nga abilidad)`,
+              )}
+            </option>
+          )}
+          {allowCustom && (
+            <option value="__custom__">
+              {tx(
+                "Other — Enter custom service…",
+                "Iba pa — Maglagay ng custom na serbisyo…",
+                "Uban pa — Isulat ang custom nga serbisyo…",
+              )}
+            </option>
+          )}
         </select>
       </div>
 
       {/* Quick switch if search filter matches no predefined category */}
-      {allowCustom && searchFilter.trim().length >= 2 && filteredOptions.length === 0 && selectMode !== "custom" && (
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-secondary px-3 py-2 text-xs text-secondary-foreground">
-          <span>No predefined category matches “{searchFilter.trim()}”.</span>
-          <Button
-            type="button"
-            size="sm"
-            variant="default"
-            onClick={() => {
-              setSelectMode("custom");
-              setCustomText(searchFilter.trim());
-              applyCustomService(searchFilter.trim());
-            }}
-          >
-            <Plus className="size-3.5" />
-            Use “{normalizeService(searchFilter)}”
-          </Button>
-        </div>
-      )}
+      {allowCustom &&
+        searchFilter.trim().length >= 2 &&
+        filteredOptions.length === 0 &&
+        selectMode !== "custom" && (
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-secondary px-3 py-2 text-xs text-secondary-foreground">
+            <span>
+              {tx(
+                `No predefined category matches “${searchFilter.trim()}”.`,
+                `Walang kategoryang tumugma sa “${searchFilter.trim()}”.`,
+                `Walay kategorya nga mohaom sa “${searchFilter.trim()}”.`,
+              )}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              onClick={() => {
+                setSelectMode("custom");
+                setCustomText(searchFilter.trim());
+                applyCustomService(searchFilter.trim());
+              }}
+            >
+              <Plus className="size-3.5" />
+              {tx("Use", "Gamitin", "Gamita")} “{normalizeService(searchFilter)}”
+            </Button>
+          </div>
+        )}
 
       {/* Custom Service Input Panel */}
       {allowCustom && (selectMode === "custom" || isCustomValue) && (
         <div className="space-y-3 rounded-2xl border bg-muted/50 p-3.5">
           <div className="space-y-1.5">
             <label htmlFor={`${id}-custom`} className="block text-xs font-bold text-foreground">
-              Custom Service Name
+              {tx(
+                "Custom Service Name",
+                "Pangalan ng Custom na Serbisyo",
+                "Ngalan sa Custom nga Serbisyo",
+              )}
             </label>
             <div className="flex gap-2">
               <Input
@@ -179,18 +227,31 @@ export function ServicePicker({
                   if (!err) {
                     setCustomErr(null);
                     onChange(normalizeService(raw), customDescription);
+                  } else {
+                    onChange("", customDescription);
                   }
                 }}
-                placeholder="e.g. Motorcycle Mechanic, Solar Panel Installer"
+                placeholder={tx(
+                  "e.g. Motorcycle Mechanic, Solar Panel Installer",
+                  "hal. Motorcycle Mechanic, Solar Panel Installer",
+                  "pananglitan, Motorcycle Mechanic, Solar Panel Installer",
+                )}
                 aria-invalid={!!customErr}
+                aria-describedby={
+                  customErr ? `${id}-custom-error` : error ? `${id}-error` : undefined
+                }
               />
               <Button type="button" size="sm" onClick={() => applyCustomService()}>
                 <Check className="size-4" />
-                Use
+                {tx("Use", "Gamitin", "Gamita")}
               </Button>
             </div>
             {customErr && (
-              <p role="alert" className="text-xs font-medium text-destructive">
+              <p
+                id={`${id}-custom-error`}
+                role="alert"
+                className="text-xs font-medium text-destructive"
+              >
                 {customErr}
               </p>
             )}
@@ -198,7 +259,13 @@ export function ServicePicker({
 
           {matchingSuggestions.length > 0 && (
             <div className="space-y-1">
-              <p className="text-[11px] font-semibold text-muted-foreground">Popular custom services:</p>
+              <p className="text-[11px] font-semibold text-muted-foreground">
+                {tx(
+                  "Popular custom services:",
+                  "Mga sikat na custom na serbisyo:",
+                  "Kasagarang custom nga serbisyo:",
+                )}
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {matchingSuggestions.map((s) => (
                   <button
@@ -224,14 +291,25 @@ export function ServicePicker({
 
           {showCustomDescription && (
             <div className="space-y-1">
-              <label htmlFor={`${id}-custom-desc`} className="block text-xs font-semibold text-muted-foreground">
-                Optional Custom Service Notes
+              <label
+                htmlFor={`${id}-custom-desc`}
+                className="block text-xs font-semibold text-muted-foreground"
+              >
+                {tx(
+                  "Optional Custom Service Notes",
+                  "Opsyonal na Tala sa Custom na Serbisyo",
+                  "Opsyonal nga Mubo nga Sulat sa Serbisyo",
+                )}
               </label>
               <Input
                 id={`${id}-custom-desc`}
                 value={customDescription}
                 onChange={(e) => onCustomDescriptionChange?.(e.target.value)}
-                placeholder="Briefly describe what this custom service covers (optional)"
+                placeholder={tx(
+                  "Briefly describe what this custom service covers (optional)",
+                  "Maikling ilarawan kung ano ang sakop ng serbisyong ito (opsyonal)",
+                  "Mubo nga ihulagway unsay sakop niining maong serbisyo (opsyonal)",
+                )}
               />
             </div>
           )}
@@ -239,7 +317,7 @@ export function ServicePicker({
       )}
 
       {error && (
-        <p role="alert" className="text-sm font-medium text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-sm font-medium text-destructive">
           {error}
         </p>
       )}

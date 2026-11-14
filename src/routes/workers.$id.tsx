@@ -6,6 +6,7 @@ import { Avatar, Availability, SectionHeader } from "@/components/gaw/primitives
 import { Button } from "@/components/ui/button";
 import { BARANGAYS, barangayName, WORKERS, type Worker } from "@/lib/gaw/data";
 import { distanceKm, roundKm } from "@/lib/gaw/filter";
+import { useI18n } from "@/lib/gaw/i18n";
 import { formatPeso, hiringOrigin, useGaw } from "@/lib/gaw/store";
 
 export const Route = createFileRoute("/workers/$id")({
@@ -22,7 +23,10 @@ export const Route = createFileRoute("/workers/$id")({
       ? [
           { title: `${loaderData.worker.name}, ${loaderData.worker.skill} — GAW` },
           { name: "description", content: loaderData.worker.bio },
-          { property: "og:title", content: `${loaderData.worker.name}, ${loaderData.worker.skill} — GAW` },
+          {
+            property: "og:title",
+            content: `${loaderData.worker.name}, ${loaderData.worker.skill} — GAW`,
+          },
           { property: "og:description", content: loaderData.worker.bio },
         ]
       : [{ title: "Worker Profile — GAW" }],
@@ -43,12 +47,13 @@ export const Route = createFileRoute("/workers/$id")({
 function ProfilePage() {
   const { worker, isSelf } = Route.useLoaderData();
   const { workerProfile, account, available } = useGaw();
+  const { tx } = useI18n();
 
   const resolvedWorker: Worker | null = isSelf
     ? workerProfile
       ? {
           id: "w-me",
-          name: `${account?.name ?? "Your Profile"} (Your Worker Profile)`,
+          name: `${account?.name ?? tx("Your Profile", "Iyong Profile", "Imong Profile")} (${tx("Your Worker Profile", "Iyong Worker Profile", "Imong Worker Profile")})`,
           initials: "ME",
           skill: workerProfile.skill,
           skills: workerProfile.skills,
@@ -61,22 +66,38 @@ function ProfilePage() {
           jobsDone: 12,
           years: 3,
           bio: workerProfile.description,
-          hours: "Flexible schedule",
+          hours: tx("Flexible schedule", "Flexible na iskedyul", "Flexible nga iskedyul"),
           reviews: [
-            { author: "Maria S.", rating: 5, text: "Great communication and reliable work.", when: "Recent" },
+            {
+              author: "Maria S.",
+              rating: 5,
+              text: "Great communication and reliable work.",
+              when: "Recent",
+            },
           ],
           portfolio: [workerProfile.skill, ...workerProfile.skills.slice(0, 2)],
         }
       : null
     : worker;
 
+  const backLabel = tx("Back to Nearby Finder", "Bumalik sa Paghahanap", "Balik sa Pangita");
+  const titleLabel = tx("Worker profile", "Profile ng Manggagawa", "Profile sa Trabahante");
+
   if (!resolvedWorker) {
     return (
-      <AppLayout mode="hire" back={<BackButton to="/find" label="Back to Nearby Finder" />} title="Worker profile">
+      <AppLayout mode="hire" back={<BackButton to="/find" label={backLabel} />} title={titleLabel}>
         <div className="rounded-3xl border bg-card p-6 text-center shadow-soft">
-          <p className="font-bold">Set up your worker profile in Working Mode to preview it here.</p>
+          <p className="font-bold">
+            {tx(
+              "Set up your worker profile in Working Mode to preview it here.",
+              "I-set up muna ang worker profile mo sa Magtrabaho mode para makita rito.",
+              "I-set up una ang imong worker profile sa Magtrabaho mode aron makita dinhi.",
+            )}
+          </p>
           <Button asChild className="mt-4">
-            <Link to="/work">Go to Working Mode</Link>
+            <Link to="/work">
+              {tx("Go to Working Mode", "Pumunta sa Magtrabaho Mode", "Adto sa Magtrabaho Mode")}
+            </Link>
           </Button>
         </div>
       </AppLayout>
@@ -84,7 +105,7 @@ function ProfilePage() {
   }
 
   return (
-    <AppLayout mode="hire" back={<BackButton to="/find" label="Back to Nearby Finder" />} title="Worker profile">
+    <AppLayout mode="hire" back={<BackButton to="/find" label={backLabel} />} title={titleLabel}>
       <WorkerProfile worker={resolvedWorker} isSelf={isSelf} />
     </AppLayout>
   );
@@ -92,19 +113,21 @@ function ProfilePage() {
 
 function WorkerProfile({ worker, isSelf }: { worker: Worker; isSelf?: boolean }) {
   const gaw = useGaw();
+  const { tx, translateCategory } = useI18n();
   const distance = roundKm(distanceKm(hiringOrigin(gaw), worker));
   const Icon = iconFor(worker.skill);
 
   const cta = isSelf ? (
     <Button asChild size="lg" variant="outline" className="w-full">
       <Link to="/work">
-        <Pencil className="size-4" /> Edit Your Worker Profile
+        <Pencil className="size-4" />{" "}
+        {tx("Edit Your Worker Profile", "I-edit ang Worker Profile", "Usba ang Worker Profile")}
       </Link>
     </Button>
   ) : (
     <Button asChild size="lg" className="w-full">
       <Link to="/book/$workerId" params={{ workerId: worker.id }}>
-        Request Booking
+        {tx("Request Booking", "Mag-book Ngayon", "I-book Karon")}
       </Link>
     </Button>
   );
@@ -117,17 +140,24 @@ function WorkerProfile({ worker, isSelf }: { worker: Worker; isSelf?: boolean })
             <Avatar initials={worker.initials} size="xl" />
             <div className="flex-1">
               <h2 className="text-2xl font-extrabold tracking-tight">{worker.name}</h2>
-              <p className="font-semibold text-primary">{worker.skill}</p>
+              <p className="font-semibold text-primary">{translateCategory(worker.skill)}</p>
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
                 <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                  <Star className="size-4 fill-gold text-gold" aria-hidden /> {worker.rating.toFixed(1)}
-                  <span className="font-normal text-muted-foreground">({worker.reviews.length * 12 + 7} reviews)</span>
+                  <Star className="size-4 fill-gold text-gold" aria-hidden />{" "}
+                  {worker.rating.toFixed(1)}
+                  <span className="font-normal text-muted-foreground">
+                    ({worker.reviews.length}{" "}
+                    {tx("sample reviews", "sample na review", "sample nga review")})
+                  </span>
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <Briefcase className="size-4" aria-hidden /> {worker.jobsDone} jobs · {worker.years} yrs
+                  <Briefcase className="size-4" aria-hidden /> {worker.jobsDone}{" "}
+                  {tx("jobs", "trabaho", "trabaho")} · {worker.years} {tx("yrs", "taon", "tuig")}
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <MapPin className="size-4" aria-hidden /> {barangayName(worker.barangayId)} area · ≈{distance} km from your location
+                  <MapPin className="size-4" aria-hidden /> {barangayName(worker.barangayId)}{" "}
+                  {tx("area", "lugar", "dapit")} · ≈{distance} km{" "}
+                  {tx("from your location", "mula sa lokasyon mo", "gikan sa imong lokasyon")}
                 </span>
               </div>
               <div className="mt-2.5">
@@ -138,33 +168,44 @@ function WorkerProfile({ worker, isSelf }: { worker: Worker; isSelf?: boolean })
         </section>
 
         <section className="rounded-3xl border bg-card p-5 shadow-soft md:p-7">
-          <SectionHeader title="About" />
+          <SectionHeader title={tx("About", "Tungkol", "Mahitungod")} />
           <p className="leading-relaxed text-muted-foreground">{worker.bio}</p>
-          <h3 className="mt-5 text-sm font-bold">Skills</h3>
+          <h3 className="mt-5 text-sm font-bold">
+            {tx("Skills", "Mga Kasanayan", "Mga Abilidad")}
+          </h3>
           <ul className="mt-2 flex flex-wrap gap-2">
             <li className="rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground">
-              {worker.skill} (Primary)
+              {translateCategory(worker.skill)} ({tx("Primary", "Pangunahin", "Panguna")})
             </li>
             {worker.skills.map((s) => (
-              <li key={s} className="rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground">
-                {s}
+              <li
+                key={s}
+                className="rounded-full bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground"
+              >
+                {translateCategory(s)}
               </li>
             ))}
           </ul>
-          <h3 className="mt-5 text-sm font-bold">Availability</h3>
+          <h3 className="mt-5 text-sm font-bold">
+            {tx("Availability", "Oras na Available", "Oras nga Bakante")}
+          </h3>
           <p className="mt-1 inline-flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="size-4" aria-hidden /> {worker.hours}
           </p>
         </section>
 
         <section>
-          <SectionHeader title="Portfolio" />
+          <SectionHeader title={tx("Portfolio", "Portfolio", "Portfolio")} />
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {worker.portfolio.map((p, i) => (
               <li
                 key={p}
                 className={`flex aspect-[4/3] flex-col justify-between rounded-2xl p-4 shadow-soft ${
-                  ["bg-contour text-deep-foreground", "bg-secondary text-secondary-foreground", "bg-gold-sheen text-gold-foreground"][i % 3]
+                  [
+                    "bg-contour text-deep-foreground",
+                    "bg-secondary text-secondary-foreground",
+                    "bg-gold-sheen text-gold-foreground",
+                  ][i % 3]
                 }`}
               >
                 <Icon className="size-6 opacity-80" aria-hidden />
@@ -172,11 +213,17 @@ function WorkerProfile({ worker, isSelf }: { worker: Worker; isSelf?: boolean })
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-muted-foreground">Sample portfolio for demo purposes.</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {tx(
+              "Sample portfolio for demo purposes.",
+              "Sample na portfolio para sa demo.",
+              "Sample nga portfolio alang sa demo.",
+            )}
+          </p>
         </section>
 
         <section>
-          <SectionHeader title="Reviews" />
+          <SectionHeader title={tx("Reviews", "Mga Review", "Mga Review")} />
           <ul className="space-y-3">
             {worker.reviews.map((r) => (
               <li key={r.author} className="rounded-2xl border bg-card p-4 shadow-soft">
@@ -197,20 +244,33 @@ function WorkerProfile({ worker, isSelf }: { worker: Worker; isSelf?: boolean })
 
       <aside className="hidden lg:block">
         <div className="sticky top-24 rounded-3xl border bg-card p-6 shadow-soft">
-          <p className="text-sm text-muted-foreground">Rate</p>
+          <p className="text-sm text-muted-foreground">{tx("Rate", "Singil", "Bayad")}</p>
           <p className="text-3xl font-extrabold">
             {worker.rate ? (
               <>
                 {formatPeso(worker.rate)}
-                <span className="text-base font-medium text-muted-foreground"> / hour</span>
+                <span className="text-base font-medium text-muted-foreground">
+                  {" "}
+                  / {tx("hour", "oras", "oras")}
+                </span>
               </>
             ) : (
-              "Request Quote"
+              tx("Request Quote", "Humingi ng Presyo", "Mangayo og Presyo")
             )}
           </p>
           <div className="mt-5">{cta}</div>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            {isSelf ? "You cannot hire yourself. Switch to Working Mode to edit." : "No payment now. The worker confirms first."}
+            {isSelf
+              ? tx(
+                  "You cannot hire yourself. Switch to Working Mode to edit.",
+                  "Hindi mo puwedeng i-hire ang sarili mo. Lumipat sa Magtrabaho Mode para i-edit.",
+                  "Dili nimo pwede i-hire ang imong kaugalingon. Balhin sa Magtrabaho Mode aron usbon.",
+                )
+              : tx(
+                  "No payment now. The worker confirms first.",
+                  "Walang bayad ngayon. Kukumpirmahin muna ng manggagawa.",
+                  "Walay bayad karon. Kumpirmahon una sa trabahante.",
+                )}
           </p>
         </div>
       </aside>
@@ -218,7 +278,9 @@ function WorkerProfile({ worker, isSelf }: { worker: Worker; isSelf?: boolean })
       <div className="fixed inset-x-0 bottom-16 z-20 border-t bg-card/95 p-3 backdrop-blur-md lg:hidden">
         <div className="mx-auto flex max-w-md items-center gap-3">
           <p className="shrink-0 text-sm font-bold">
-            {worker.rate ? `${formatPeso(worker.rate)}/hr` : "Quote"}
+            {worker.rate
+              ? `${formatPeso(worker.rate)}/${tx("hr", "oras", "oras")}`
+              : tx("Quote", "Presyo", "Presyo")}
           </p>
           {cta}
         </div>

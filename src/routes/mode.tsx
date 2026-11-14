@@ -5,6 +5,7 @@ import roleHireWorkerImg from "@/assets/role-hire-worker.jpg";
 import { AccountMenu, ThemeToggle, useRequireSignIn } from "@/components/gaw/AppLayout";
 import { FOCUS_RING, REDUCED_MOTION_RESET } from "@/components/gaw/interactions";
 import { HeaderBrand } from "@/components/gaw/primitives";
+import { LanguageSelector, useI18n } from "@/lib/gaw/i18n";
 import { useGaw, type Mode } from "@/lib/gaw/store";
 
 export const Route = createFileRoute("/mode")({
@@ -21,26 +22,37 @@ export const Route = createFileRoute("/mode")({
 
 /** ModeSelector: the two equal-height contextual visual role cards. */
 function ModeSelector({ onPick }: { onPick: (m: Mode) => void }) {
+  const { tx } = useI18n();
   const cards = [
     {
       mode: "hire" as Mode,
-      title: "Hire a Worker",
-      body: "Find skilled workers near you.",
+      title: tx("Hire a Worker", "Kumuha ng Manggagawa", "Mag-hire og Trabahante"),
+      body: tx(
+        "Find skilled workers near you.",
+        "Maghanap ng bihasang manggagawa malapit sa iyo.",
+        "Pangita og hanas nga trabahante duol sa imong lugar.",
+      ),
       image: roleHireWorkerImg,
       imageAlt: "Skilled local worker arriving with tools to assist a homeowner in Davao City",
       imagePosition: "object-[68%_28%]",
-      borderTone: "border-border/80 dark:border-white/12 hover:border-primary dark:hover:border-primary",
+      borderTone:
+        "border-border/80 dark:border-white/12 hover:border-primary dark:hover:border-primary",
       overlayTone:
         "bg-[linear-gradient(180deg,rgba(9,22,18,0.12)_0%,rgba(9,22,18,0.44)_48%,rgba(9,22,18,0.92)_100%),linear-gradient(110deg,rgba(9,24,19,0.82)_0%,rgba(9,24,19,0.38)_54%,rgba(9,24,19,0.08)_100%)]",
     },
     {
       mode: "work" as Mode,
-      title: "Find Work",
-      body: "Discover jobs in your area.",
+      title: tx("Find Work", "Maghanap ng Trabaho", "Mangita og Trabaho"),
+      body: tx(
+        "Discover jobs in your area.",
+        "Tuklasin ang mga trabaho sa iyong lugar.",
+        "Tan-awa ang mga bakanteng trabaho sa imong dapit.",
+      ),
       image: roleFindWorkImg,
       imageAlt: "Skilled local technician actively performing electrical work in Davao City",
       imagePosition: "object-[66%_26%]",
-      borderTone: "border-border/80 dark:border-white/14 hover:border-gold dark:hover:border-gold/80",
+      borderTone:
+        "border-border/80 dark:border-white/14 hover:border-gold dark:hover:border-gold/80",
       overlayTone:
         "bg-[radial-gradient(85%_85%_at_88%_12%,rgba(244,181,68,0.18)_0%,transparent_60%),linear-gradient(180deg,rgba(11,31,28,0.10)_0%,rgba(11,31,28,0.44)_48%,rgba(8,24,21,0.93)_100%),linear-gradient(110deg,rgba(10,30,27,0.84)_0%,rgba(10,30,27,0.40)_54%,rgba(10,30,27,0.08)_100%)]",
     },
@@ -102,6 +114,7 @@ function ModeSelector({ onPick }: { onPick: (m: Mode) => void }) {
 function ModePage() {
   const ready = useRequireSignIn();
   const { account, setMode } = useGaw();
+  const { tx } = useI18n();
   const navigate = useNavigate();
   if (!ready) return null;
 
@@ -117,11 +130,12 @@ function ModePage() {
           <Link
             to="/"
             aria-label="GAW — Grab a Work welcome page"
-            className={`inline-flex shrink-0 rounded-xl transition-opacity duration-150 hover:opacity-85 ${FOCUS_RING}`}
+            className={`inline-flex shrink-0 items-center rounded-xl transition-opacity duration-150 hover:opacity-85 ${FOCUS_RING}`}
           >
             <HeaderBrand size="md" />
           </Link>
           <div className="flex items-center gap-2.5">
+            <LanguageSelector variant="compact" />
             <ThemeToggle compact />
             <AccountMenu />
           </div>
@@ -129,13 +143,21 @@ function ModePage() {
 
         <main className="mt-10 pb-12 sm:mt-12 md:mt-14 lg:mt-16">
           <p className="text-[1.0625rem] font-medium text-muted-foreground sm:text-[1.125rem] md:text-[1.2rem]">
-            Hi {account?.name.split(" ")[0]} 👋
+            {tx("Hi", "Kumusta", "Maayong adlaw")} {account?.name.split(" ")[0]} 👋
           </p>
           <h1 className="mt-2 text-[clamp(2rem,3.6vw,2.875rem)] font-extrabold leading-[1.1] tracking-[-0.025em]">
-            How would you like to use GAW?
+            {tx(
+              "How would you like to use GAW?",
+              "Paano mo gustong gamitin ang GAW?",
+              "Unsaon nimo paggamit ang GAW?",
+            )}
           </h1>
           <p className="mt-3 max-w-2xl text-[1rem] leading-relaxed text-muted-foreground sm:text-[1.125rem] md:text-[1.1875rem]">
-            You can switch anytime — your bookings and jobs stay saved.
+            {tx(
+              "You can switch anytime — your bookings and jobs stay saved.",
+              "Maaari kang lumipat anumang oras — mananatiling naka-save ang iyong mga booking at trabaho.",
+              "Pwede ka mobalhin bisan kanus-a — pabilin nga naka-save ang imong mga booking ug trabaho.",
+            )}
           </p>
 
           <div className="mt-8 sm:mt-10 md:mt-11">

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GAWBrand, GAWWordmark } from "@/components/gaw/GAWBrand";
+import { LanguageSelector, useI18n } from "@/lib/gaw/i18n";
 import { useGaw } from "@/lib/gaw/store";
 import welcome from "@/assets/gaw-welcome.jpg";
 
@@ -11,12 +12,17 @@ export const Route = createFileRoute("/")({
       { title: "GAW — Grab a Work | Find Local Talent. Discover Nearby Work." },
       {
         name: "description",
-        content: "GAW (Grab a Work) connects Davao City residents with nearby plumbers, electricians, cleaners and more.",
+        content:
+          "GAW (Grab a Work) connects Davao City residents with nearby plumbers, electricians, cleaners and more.",
       },
-      { property: "og:title", content: "GAW — Grab a Work | Find Local Talent. Discover Nearby Work." },
+      {
+        property: "og:title",
+        content: "GAW — Grab a Work | Find Local Talent. Discover Nearby Work.",
+      },
       {
         property: "og:description",
-        content: "GAW (Grab a Work) connects Davao City residents with nearby plumbers, electricians, cleaners and more.",
+        content:
+          "GAW (Grab a Work) connects Davao City residents with nearby plumbers, electricians, cleaners and more.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -27,6 +33,7 @@ export const Route = createFileRoute("/")({
 
 function Welcome() {
   const { hydrated, signedIn, mode } = useGaw();
+  const { tx } = useI18n();
   const resume = hydrated && signedIn;
 
   return (
@@ -56,7 +63,11 @@ function Welcome() {
             <div className="min-w-0">
               <GAWWordmark size="md" />
               <p className="mt-1.5 text-[0.8125rem] font-medium leading-snug text-deep-muted sm:text-[0.9375rem] lg:text-[1.02rem]">
-                Davao City’s Hyperlocal Hiring & Work Marketplace
+                {tx(
+                  "Davao City’s Hyperlocal Hiring & Work Marketplace",
+                  "Lokal na Marketplace ng Serbisyo at Trabaho sa Davao City",
+                  "Lokal nga Marketplace sa Serbisyo ug Trabaho sa Davao City",
+                )}
               </p>
             </div>
             <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gold/15 px-3.5 py-1.5 text-[0.8125rem] font-bold text-gold ring-1 ring-gold/35 sm:px-4 sm:py-2 sm:text-[0.9375rem]">
@@ -69,19 +80,31 @@ function Welcome() {
         <div className="relative flex flex-col justify-center pb-4 pt-1 lg:py-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <GAWBrand variant="expanded" size="xl" onDeep />
+            <LanguageSelector variant="onDeep" />
           </div>
 
           <p className="mt-7 text-[clamp(0.875rem,1.15vw,1.125rem)] font-extrabold uppercase tracking-[0.18em] text-gold lg:mt-8">
-            Local Work. Nearby Opportunities.
+            {tx(
+              "Local Work. Nearby Opportunities.",
+              "Lokal na Serbisyo. Trabahong Malapit sa Iyo.",
+              "Lokal nga Serbisyo. Trabaho Duol Nimo.",
+            )}
           </p>
 
           <h1 className="mt-3.5 text-[clamp(2.5rem,4.6vw,4.65rem)] font-extrabold leading-[1.04] tracking-[-0.03em] text-deep-foreground">
-            Find Local Talent. Discover Nearby Work.
+            {tx(
+              "Find Local Talent. Discover Nearby Work.",
+              "Maghanap ng Manggagawa. Tuklasin ang Trabaho sa Malapit.",
+              "Pangita og Hanas nga Trabahante. Diskubreha ang Trabaho sa Duol.",
+            )}
           </h1>
 
           <p className="mt-5 max-w-[35rem] text-[clamp(1.0625rem,1.45vw,1.4rem)] leading-[1.55] text-deep-muted">
-            Trusted plumbers, electricians, cleaners and more — right in your barangay. Or find your next job close to
-            home.
+            {tx(
+              "Trusted plumbers, electricians, cleaners and more — right in your barangay. Or find your next job close to home.",
+              "Maaasahang tubero, electrician, tagalinis at iba pa — mismo sa iyong barangay. O hanapin ang susunod mong trabaho malapit sa bahay.",
+              "Kasaligang tubero, electrician, tiglimpyo ug uban pa — diha ra sa imong barangay. O pangitaa ang sunod nimong trabaho duol sa inyoha.",
+            )}
           </p>
 
           <div className="mt-8 flex flex-col gap-3.5 sm:flex-row sm:items-center lg:mt-9">
@@ -92,7 +115,9 @@ function Welcome() {
                 variant="gold"
                 className="h-14 rounded-2xl px-8 text-[1.0625rem] font-bold sm:h-[3.75rem] sm:px-10 sm:text-[1.1875rem]"
               >
-                <Link to={mode === "work" ? "/work" : mode === "hire" ? "/hire" : "/mode"}>Continue to GAW</Link>
+                <Link to={mode === "work" ? "/work" : mode === "hire" ? "/hire" : "/mode"}>
+                  {tx("Continue to GAW", "Magpatuloy sa GAW", "Padayon sa GAW")}
+                </Link>
               </Button>
             ) : (
               <>
@@ -102,7 +127,7 @@ function Welcome() {
                   variant="gold"
                   className="h-14 rounded-2xl px-8 text-[1.0625rem] font-bold sm:h-[3.75rem] sm:px-10 sm:text-[1.1875rem]"
                 >
-                  <Link to="/signup">Get Started</Link>
+                  <Link to="/signup">{tx("Get Started", "Magsimula Na", "Sugdi Na")}</Link>
                 </Button>
                 <Button
                   asChild
@@ -110,7 +135,7 @@ function Welcome() {
                   variant="ghostOnDeep"
                   className="h-14 rounded-2xl px-8 text-[1.0625rem] font-bold sm:h-[3.75rem] sm:px-9 sm:text-[1.1875rem]"
                 >
-                  <Link to="/login">Log In</Link>
+                  <Link to="/login">{tx("Log In", "Mag-log In", "Mag-log In")}</Link>
                 </Button>
               </>
             )}
@@ -119,15 +144,33 @@ function Welcome() {
           <ul className="mt-9 grid grid-cols-1 gap-4 border-t border-white/12 pt-6 text-[0.9rem] font-medium leading-snug text-deep-foreground/90 sm:grid-cols-3 sm:gap-5 sm:text-[0.95rem] lg:mt-10 lg:pt-7 lg:text-[1.02rem]">
             <li className="flex items-start gap-2.5 sm:flex-col sm:gap-2">
               <MapPin className="mt-0.5 size-6 shrink-0 text-gold sm:mt-0" aria-hidden />
-              <span>Workers near your barangay</span>
+              <span>
+                {tx(
+                  "Workers near your barangay",
+                  "Manggagawa malapit sa iyong barangay",
+                  "Trabahante duol sa imong barangay",
+                )}
+              </span>
             </li>
             <li className="flex items-start gap-2.5 sm:flex-col sm:gap-2">
               <ShieldCheck className="mt-0.5 size-6 shrink-0 text-gold sm:mt-0" aria-hidden />
-              <span>Reviews from neighbors</span>
+              <span>
+                {tx(
+                  "Reviews from neighbors",
+                  "Mga review mula sa kapitbahay",
+                  "Mga review gikan sa silingan",
+                )}
+              </span>
             </li>
             <li className="flex items-start gap-2.5 sm:flex-col sm:gap-2">
               <Sparkles className="mt-0.5 size-6 shrink-0 text-gold sm:mt-0" aria-hidden />
-              <span>Hire or work, one account</span>
+              <span>
+                {tx(
+                  "Hire or work, one account",
+                  "Mag-hire o magtrabaho, iisang account",
+                  "Mag-hire o magtrabaho, usa ra ka account",
+                )}
+              </span>
             </li>
           </ul>
         </div>

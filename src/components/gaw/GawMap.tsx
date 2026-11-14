@@ -1,18 +1,37 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Compass, Crosshair, Loader2, LocateFixed, MapPin, Navigation, Radio, RefreshCw, ShieldAlert } from "lucide-react";
+import {
+  Check,
+  Compass,
+  Crosshair,
+  Loader2,
+  LocateFixed,
+  MapPin,
+  Navigation,
+  Radio,
+  RefreshCw,
+  ShieldAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 import { segmentedOptionClass } from "./interactions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BARANGAYS, barangayName, DAVAO_CENTER, nearestBarangay, RADIUS_OPTIONS } from "@/lib/gaw/data";
+import {
+  BARANGAYS,
+  barangayName,
+  DAVAO_CENTER,
+  nearestBarangay,
+  RADIUS_OPTIONS,
+} from "@/lib/gaw/data";
 import { distanceKm, roundKm, type WorkerWithDistance } from "@/lib/gaw/filter";
 import { formatAccuracy, useGeolocation, type GeoFix, type LatLng } from "@/lib/gaw/geo";
+import { useI18n } from "@/lib/gaw/i18n";
 import type { PlacedLocation } from "@/lib/gaw/store";
 import { useTheme } from "@/lib/gaw/theme";
 import { cn } from "@/lib/utils";
 
 const OSM_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const OSM_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const CARTO_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
@@ -91,7 +110,7 @@ export function InteractiveMap({
   center,
   zoom = 13,
   pin,
-  pinLabel = "Selected location",
+  pinLabel,
   draggablePin = false,
   onMovePin,
   gpsFix,
@@ -113,7 +132,10 @@ export function InteractiveMap({
   const [ready, setReady] = useState(false);
   const [tileFallback, setTileFallback] = useState(false);
   const { resolved } = useTheme();
+  const { tx, translateCategory } = useI18n();
   const isDark = resolved === "dark";
+  const resolvedPinLabel =
+    pinLabel ?? tx("Selected location", "Napiling lokasyon", "Napili nga lokasyon");
 
   onMovePinRef.current = onMovePin;
   onSelectWorkerRef.current = onSelectWorker;
@@ -225,15 +247,23 @@ export function InteractiveMap({
         }).addTo(group);
       }
 
+      const gpsTooltip = tx(
+        "Current GPS position",
+        "Kasalukuyang lokasyon sa GPS",
+        "Kasamtangang lokasyon sa GPS",
+      );
       const gpsIcon = L.divIcon({
         className: "gaw-gps-marker",
-        html: `<div style="width:18px;height:18px;border-radius:9999px;background:#2563EB;border:3px solid #FFFFFF;box-shadow:0 0 0 5px rgba(37,99,235,0.32),0 2px 6px rgba(0,0,0,0.45);" title="Current GPS position"></div>`,
+        html: `<div style="width:18px;height:18px;border-radius:9999px;background:#2563EB;border:3px solid #FFFFFF;box-shadow:0 0 0 5px rgba(37,99,235,0.32),0 2px 6px rgba(0,0,0,0.45);" title="${gpsTooltip}"></div>`,
         iconSize: [18, 18],
         iconAnchor: [9, 9],
       });
 
       L.marker([gpsFix.lat, gpsFix.lng], { icon: gpsIcon })
-        .bindTooltip(`Current GPS position (${formatAccuracy(gpsFix.accuracy)})`, { direction: "top", offset: [0, -10] })
+        .bindTooltip(`${gpsTooltip} (${formatAccuracy(gpsFix.accuracy)})`, {
+          direction: "top",
+          offset: [0, -10],
+        })
         .addTo(group);
     }
 
@@ -244,15 +274,19 @@ export function InteractiveMap({
       const fg = selected ? "#1B1304" : w.available ? primaryMarkerFg : "#F3F7F4";
       const borderCol = isDark ? "#0D1512" : "#FFFFFF";
       const ring = selected ? "0 0 0 4px rgba(244,181,68,0.48)" : "0 2px 8px rgba(0,0,0,0.38)";
+      const skillText = translateCategory(w.skill);
       const workerIcon = L.divIcon({
         className: "gaw-worker-marker",
-        html: `<button type="button" aria-label="${w.name} (${w.skill})" style="display:grid;place-items:center;width:34px;height:34px;border-radius:9999px;background:${bg};color:${fg};font-weight:800;font-size:11px;border:2px solid ${borderCol};box-shadow:${ring};cursor:pointer;">${w.initials}</button>`,
+        html: `<button type="button" aria-label="${w.name} (${skillText})" style="display:grid;place-items:center;width:34px;height:34px;border-radius:9999px;background:${bg};color:${fg};font-weight:800;font-size:11px;border:2px solid ${borderCol};box-shadow:${ring};cursor:pointer;">${w.initials}</button>`,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
       });
 
       const marker = L.marker([w.lat, w.lng], { icon: workerIcon }).addTo(group);
-      marker.bindTooltip(`${w.name} · ${w.skill} (≈${w.distance} km)`, { direction: "top", offset: [0, -16] });
+      marker.bindTooltip(`${w.name} · ${skillText} (≈${w.distance} km)`, {
+        direction: "top",
+        offset: [0, -16],
+      });
       marker.on("click", () => {
         onSelectWorkerRef.current?.(w);
       });
@@ -283,7 +317,13 @@ export function InteractiveMap({
       }).addTo(group);
 
       marker.bindTooltip(
-        draggablePin ? `${pinLabel} — drag pin or tap map to move` : pinLabel,
+        draggablePin
+          ? tx(
+              `${resolvedPinLabel} — drag pin or tap map to move`,
+              `${resolvedPinLabel} — i-drag ang pin o i-tap ang mapa para ilipat`,
+              `${resolvedPinLabel} — i-drag ang pin o i-tap ang mapa aron ibalhin`,
+            )
+          : resolvedPinLabel,
         { direction: "top", offset: [0, -30] },
       );
 
@@ -297,39 +337,90 @@ export function InteractiveMap({
         });
       }
     }
-  }, [ready, center, pin, pinLabel, draggablePin, gpsFix, radiusKm, workers, selectedWorkerId, isDark]);
+  }, [
+    ready,
+    center,
+    pin,
+    resolvedPinLabel,
+    draggablePin,
+    gpsFix,
+    radiusKm,
+    workers,
+    selectedWorkerId,
+    isDark,
+    tx,
+    translateCategory,
+  ]);
 
   return (
     <div className="space-y-2">
-      <div className={cn("relative overflow-hidden rounded-2xl border border-border bg-muted shadow-soft", className)}>
-        <div ref={containerRef} className="h-full min-h-[260px] w-full" aria-label="Interactive location map" />
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-2xl border border-border bg-muted shadow-soft",
+          className,
+        )}
+      >
+        <div
+          ref={containerRef}
+          className="h-full min-h-[260px] w-full"
+          aria-label={tx(
+            "Interactive location map",
+            "Interaktibong mapa ng lokasyon",
+            "Interaktibong mapa sa lokasyon",
+          )}
+        />
         {!ready && (
           <div className="absolute inset-0 grid place-items-center bg-muted/85 text-xs font-semibold text-muted-foreground">
-            Loading interactive map…
+            {tx("Loading interactive map…", "Nilo-load ang mapa…", "Gina-load ang mapa…")}
           </div>
         )}
       </div>
 
       {showLegend && (
         <div
-          aria-label="Map marker legend"
+          aria-label={tx(
+            "Map marker legend",
+            "Gabay sa mga marker ng mapa",
+            "Giya sa mga marker sa mapa",
+          )}
           className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 text-[11px] font-medium text-muted-foreground"
         >
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-grid size-3.5 place-items-center rounded-full bg-primary ring-2 ring-primary/25">
               <span className="size-1.5 rounded-full bg-gold" />
             </span>
-            <span>Selected Service Location {draggablePin ? "(Draggable Pin)" : ""}</span>
+            <span>
+              {tx(
+                "Selected Service Location",
+                "Napiling Lokasyon ng Serbisyo",
+                "Napiling Lokasyon sa Serbisyo",
+              )}{" "}
+              {draggablePin
+                ? tx("(Draggable Pin)", "(Nai-da-drag na Pin)", "(Ma-drag nga Pin)")
+                : ""}
+            </span>
           </span>
           {typeof radiusKm === "number" && radiusKm > 0 && (
             <span className="inline-flex items-center gap-1.5">
               <span className="size-3 rounded-full border-2 border-dashed border-primary bg-primary/15" />
-              <span>Service Coverage ({radiusKm} km radius)</span>
+              <span>
+                {tx(
+                  `Service Coverage (${radiusKm} km radius)`,
+                  `Sakop ng Serbisyo (${radiusKm} km radius)`,
+                  `Sakop sa Serbisyo (${radiusKm} km radius)`,
+                )}
+              </span>
             </span>
           )}
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2.5 rounded-full bg-[#2563EB] ring-2 ring-[#2563EB]/30" />
-            <span>Current GPS Position</span>
+            <span>
+              {tx(
+                "Current GPS Position",
+                "Kasalukuyang Lokasyon sa GPS",
+                "Kasamtangang Lokasyon sa GPS",
+              )}
+            </span>
           </span>
         </div>
       )}
@@ -349,7 +440,11 @@ export interface MapToolbarProps {
 /**
  * Compact, responsive geolocation control bar with clear primary/secondary action hierarchy.
  */
-export function MapToolbar({
+export function MapToolbar(props: MapToolbarProps) {
+  return <MapToolbarInner {...props} />;
+}
+
+function MapToolbarInner({
   locating,
   watching,
   onUseCurrentLocation,
@@ -357,10 +452,15 @@ export function MapToolbar({
   onRecenter,
   onRefresh,
 }: MapToolbarProps) {
+  const { tx } = useI18n();
   return (
     <div
       role="toolbar"
-      aria-label="Map and GPS controls"
+      aria-label={tx(
+        "Map and GPS controls",
+        "Mga kontrol sa mapa at GPS",
+        "Mga kontrol sa mapa ug GPS",
+      )}
       className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/80 bg-muted/60 p-2 dark:bg-[#111F19]"
     >
       {/* Primary Geolocation Action */}
@@ -370,11 +470,19 @@ export function MapToolbar({
         variant="default"
         onClick={onUseCurrentLocation}
         disabled={locating}
-        aria-label="Use My Current Location"
+        aria-label={tx(
+          "Use My Current Location",
+          "Gamitin ang Kasalukuyang Lokasyon",
+          "Gamita ang Kasamtangang Lokasyon",
+        )}
         className="h-9 px-3.5 shadow-xs"
       >
-        {locating ? <Loader2 className="size-3.5 animate-spin" /> : <Crosshair className="size-3.5" />}
-        <span>Use My Location</span>
+        {locating ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <Crosshair className="size-3.5" />
+        )}
+        <span>{tx("Use My Location", "Aking Lokasyon", "Akong Lokasyon")}</span>
       </Button>
 
       {/* Secondary Actions Cluster */}
@@ -388,7 +496,11 @@ export function MapToolbar({
           className="h-9 px-3"
         >
           <Radio className={cn("size-3.5", watching && "animate-pulse")} />
-          <span>{watching ? "Stop Live GPS" : "Track Live GPS"}</span>
+          <span>
+            {watching
+              ? tx("Stop Live GPS", "Itigil ang Live GPS", "Hunonga ang Live GPS")
+              : tx("Track Live GPS", "Subaybayan ang GPS", "Bantayi ang Live GPS")}
+          </span>
           {watching && (
             <span className="ml-0.5 rounded-full bg-black/15 px-1.5 py-0.2 text-[10px] font-extrabold uppercase tracking-wider">
               ON
@@ -401,12 +513,16 @@ export function MapToolbar({
           size="sm"
           variant="outline"
           onClick={onRecenter}
-          aria-label="Recenter Map"
-          title="Recenter map on active pin or GPS"
+          aria-label={tx("Recenter Map", "Igitna muli ang Mapa", "I-sentro pag-usab ang Mapa")}
+          title={tx(
+            "Recenter map on active pin or GPS",
+            "Igitna ang mapa sa pin o GPS",
+            "I-sentro ang mapa sa pin o GPS",
+          )}
           className="h-9 px-2.5"
         >
           <Compass className="size-3.5" />
-          <span>Recenter</span>
+          <span>{tx("Recenter", "Igitna", "I-sentro")}</span>
         </Button>
 
         <Button
@@ -415,12 +531,16 @@ export function MapToolbar({
           variant="ghost"
           onClick={onRefresh}
           disabled={locating}
-          aria-label="Refresh Location"
-          title="Refresh GPS location"
+          aria-label={tx("Refresh Location", "I-refresh ang Lokasyon", "I-refresh ang Lokasyon")}
+          title={tx(
+            "Refresh GPS location",
+            "I-refresh ang lokasyon sa GPS",
+            "I-refresh ang lokasyon sa GPS",
+          )}
           className="h-9 px-2.5 text-muted-foreground hover:text-foreground"
         >
           <RefreshCw className={cn("size-3.5", locating && "animate-spin")} />
-          <span>Refresh</span>
+          <span>{tx("Refresh", "I-refresh", "I-refresh")}</span>
         </Button>
       </div>
     </div>
@@ -448,9 +568,15 @@ export function LocationPicker({
   radiusKm,
   onRadiusChange,
   onConfirm,
-  confirmLabel = "Confirm Location",
-  modeLabel = "Service Area & Location",
+  confirmLabel,
+  modeLabel,
 }: LocationPickerProps) {
+  const { tx } = useI18n();
+  const resolvedConfirmLabel =
+    confirmLabel ?? tx("Confirm Location", "Kumpirmahin ang Lokasyon", "Kumpirmaha ang Lokasyon");
+  const resolvedModeLabel =
+    modeLabel ??
+    tx("Service Area & Location", "Lugar ng Serbisyo at Lokasyon", "Lugar sa Serbisyo ug Lokasyon");
   const geo = useGeolocation();
   const [pin, setPin] = useState<LatLng>(initialLocation);
   const [source, setSource] = useState<PlacedLocation["source"]>("pin");
@@ -468,7 +594,13 @@ export function LocationPicker({
       const near = nearestBarangay(next);
       setBarangayId(near.id);
       if (!customAddress.trim()) {
-        setCustomAddress(`Near ${near.name} (GPS)`);
+        setCustomAddress(
+          tx(
+            `Near ${near.name} (GPS)`,
+            `Malapit sa ${near.name} (GPS)`,
+            `Duol sa ${near.name} (GPS)`,
+          ),
+        );
       }
       setRecenterKey((k) => k + 1);
     }
@@ -513,7 +645,13 @@ export function LocationPicker({
       near.id,
     );
     setConfirmedOnce(true);
-    toast.success(`Location confirmed: ${label}`);
+    toast.success(
+      tx(
+        `Location confirmed: ${label}`,
+        `Nakumpirma ang lokasyon: ${label}`,
+        `Nakumpirma ang lokasyon: ${label}`,
+      ),
+    );
   };
 
   const distFromDavao = roundKm(distanceKm(pin, DAVAO_CENTER));
@@ -524,11 +662,21 @@ export function LocationPicker({
     <div className="space-y-4 rounded-3xl border bg-card p-4 shadow-soft md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-primary">{modeLabel}</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-primary">
+            {resolvedModeLabel}
+          </p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {isWorkerAreaMode
-              ? "Choose where you want to offer your services. Drag the green pin or use live GPS."
-              : "Choose your service location in Davao City. Use live GPS, drag the map pin, or pick a barangay."}
+              ? tx(
+                  "Choose where you want to offer your services. Drag the green pin or use live GPS.",
+                  "Piliin kung saan mo gustong magbigay ng serbisyo. I-drag ang berdeng pin o gamitin ang live GPS.",
+                  "Pilia kon asa ka gusto mohatag og serbisyo. I-drag ang berde nga pin o gamita ang live GPS.",
+                )
+              : tx(
+                  "Choose your service location in Davao City. Use live GPS, drag the map pin, or pick a barangay.",
+                  "Piliin ang lokasyon ng serbisyo sa Davao City. Gamitin ang live GPS, i-drag ang pin, o pumili ng barangay.",
+                  "Pilia ang lokasyon sa serbisyo sa Davao City. Gamita ang live GPS, i-drag ang pin, o pagpili og barangay.",
+                )}
           </p>
         </div>
         {geo.fix ? (
@@ -538,13 +686,20 @@ export function LocationPicker({
           >
             <LocateFixed className="size-3.5 text-primary" aria-hidden />
             <span>
-              {geo.watching ? "Live GPS" : "GPS Active"} · Accuracy {formatAccuracy(geo.fix.accuracy)}
+              {geo.watching ? "Live GPS" : tx("GPS Active", "Aktibo ang GPS", "Aktibo ang GPS")} ·{" "}
+              {tx("Accuracy", "Katumpakan", "Katukma")} {formatAccuracy(geo.fix.accuracy)}
             </span>
           </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
             <MapPin className="size-3 text-primary" aria-hidden />
-            <span>{barangayName(barangayId)} selected</span>
+            <span>
+              {tx(
+                `${barangayName(barangayId)} selected`,
+                `Napili: ${barangayName(barangayId)}`,
+                `Napili: ${barangayName(barangayId)}`,
+              )}
+            </span>
           </span>
         )}
       </div>
@@ -567,7 +722,13 @@ export function LocationPicker({
         >
           <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           <div className="space-y-1">
-            <p className="font-bold">GPS Location Unavailable</p>
+            <p className="font-bold">
+              {tx(
+                "GPS Location Unavailable",
+                "Hindi Magamit ang Lokasyon sa GPS",
+                "Dili Magamit ang Lokasyon sa GPS",
+              )}
+            </p>
             <p>{geo.error}</p>
           </div>
         </div>
@@ -576,7 +737,11 @@ export function LocationPicker({
       {outsideDavao && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-gold-soft px-3.5 py-2.5 text-xs text-gold-foreground">
           <span>
-            Current pin is {distFromDavao} km from Davao City center. Demo workers are seeded in Davao City.
+            {tx(
+              `Current pin is ${distFromDavao} km from Davao City center. Demo workers are seeded in Davao City.`,
+              `Ang kasalukuyang pin ay ${distFromDavao} km mula sa sentro ng Davao City. Nasa Davao City ang mga demo worker.`,
+              `Ang kasamtangang pin kay ${distFromDavao} km gikan sa sentro sa Davao City. Naa sa Davao City ang mga demo worker.`,
+            )}
           </span>
           <Button
             type="button"
@@ -584,10 +749,16 @@ export function LocationPicker({
             variant="outline"
             onClick={() => {
               handleBarangaySelect("bajada");
-              toast("Moved pin to Bajada, Davao City");
+              toast(
+                tx(
+                  "Moved pin to Bajada, Davao City",
+                  "Inilipat ang pin sa Bajada, Davao City",
+                  "Gibalhin ang pin sa Bajada, Davao City",
+                ),
+              );
             }}
           >
-            Jump to Davao City
+            {tx("Jump to Davao City", "Pumunta sa Davao City", "Adto sa Davao City")}
           </Button>
         </div>
       )}
@@ -608,8 +779,11 @@ export function LocationPicker({
       {/* Manual Barangay & Street/Landmark Inputs */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label htmlFor="loc-picker-brgy" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Barangay / District
+          <label
+            htmlFor="loc-picker-brgy"
+            className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            {tx("Barangay / District", "Barangay / Distrito", "Barangay / Distrito")}
           </label>
           <select
             id="loc-picker-brgy"
@@ -626,8 +800,15 @@ export function LocationPicker({
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="loc-picker-addr" className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Street, Landmark, or Address Label
+          <label
+            htmlFor="loc-picker-addr"
+            className="block text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            {tx(
+              "Street, Landmark, or Address Label",
+              "Kalye, Palatandaan, o Address",
+              "Karsada, Timailhan, o Address",
+            )}
           </label>
           <Input
             id="loc-picker-addr"
@@ -636,7 +817,11 @@ export function LocationPicker({
               setCustomAddress(e.target.value);
               setConfirmedOnce(false);
             }}
-            placeholder={`e.g. Near ${barangayName(barangayId)} Barangay Hall`}
+            placeholder={tx(
+              `e.g. Near ${barangayName(barangayId)} Barangay Hall`,
+              `hal. Malapit sa ${barangayName(barangayId)} Barangay Hall`,
+              `pananglitan Duol sa ${barangayName(barangayId)} Barangay Hall`,
+            )}
           />
         </div>
       </div>
@@ -645,7 +830,11 @@ export function LocationPicker({
       {typeof radiusKm === "number" && onRadiusChange && (
         <fieldset>
           <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Working Radius (Service Coverage Circle)
+            {tx(
+              "Working Radius (Service Coverage Circle)",
+              "Sakop ng Trabaho (Layo ng Serbisyo)",
+              "Sakop sa Trabaho (Gilay-on sa Serbisyo)",
+            )}
           </legend>
           <div className="grid grid-cols-4 gap-1.5 rounded-xl border border-border/50 bg-muted p-1">
             {RADIUS_OPTIONS.map((r) => (
@@ -654,7 +843,11 @@ export function LocationPicker({
                 type="button"
                 aria-pressed={radiusKm === r}
                 onClick={() => onRadiusChange(r)}
-                className={segmentedOptionClass(radiusKm === r, "card", "h-9 rounded-lg text-xs font-bold")}
+                className={segmentedOptionClass(
+                  radiusKm === r,
+                  "card",
+                  "h-9 rounded-lg text-xs font-bold",
+                )}
               >
                 {r} km
               </button>
@@ -671,12 +864,16 @@ export function LocationPicker({
             {customAddress.trim() || barangayName(barangayId)}
           </p>
           <p className="mt-0.5">
-            Coordinates: {pin.lat.toFixed(4)}° N, {pin.lng.toFixed(4)}° E · Nearest: {barangayName(barangayId)}
+            {tx("Coordinates:", "Koordinado:", "Mga Koordinado:")} {pin.lat.toFixed(4)}° N,{" "}
+            {pin.lng.toFixed(4)}° E · {tx("Nearest:", "Pinakamalapit:", "Pinakaduol:")}{" "}
+            {barangayName(barangayId)}
           </p>
         </div>
         <Button type="button" onClick={handleConfirm} className="shrink-0">
           <Check className="size-4" />
-          {confirmedOnce ? "Location Confirmed" : confirmLabel}
+          {confirmedOnce
+            ? tx("Location Confirmed", "Nakumpirma ang Lokasyon", "Nakumpirma ang Lokasyon")
+            : resolvedConfirmLabel}
         </Button>
       </div>
     </div>
@@ -696,6 +893,7 @@ export function LiveJobSharingCard({
   barangayId: string;
   targetLocation: LatLng | null;
 }) {
+  const { tx } = useI18n();
   const geo = useGeolocation();
   const [sharing, setSharing] = useState(false);
 
@@ -706,11 +904,23 @@ export function LiveJobSharingCard({
     if (sharing) {
       geo.stopWatch();
       setSharing(false);
-      toast("Stopped live location sharing");
+      toast(
+        tx(
+          "Stopped live location sharing",
+          "Itinigil ang pag-share ng live location",
+          "Gihunong ang pag-share sa live location",
+        ),
+      );
     } else {
       setSharing(true);
       geo.startWatch();
-      toast.success("Live location sharing started for this active booking");
+      toast.success(
+        tx(
+          "Live location sharing started for this active booking",
+          "Sinimulan ang pag-share ng live location para sa aktibong booking",
+          "Gisugdan ang pag-share sa live location alang niining aktibo nga booking",
+        ),
+      );
     }
   };
 
@@ -721,21 +931,45 @@ export function LiveJobSharingCard({
           <span
             className={cn(
               "grid size-8 place-items-center rounded-xl",
-              sharing ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground",
+              sharing
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground",
             )}
           >
             <Navigation className="size-4" aria-hidden />
           </span>
           <div>
             <p className="text-xs font-bold">
-              {sharing ? "Live Job Location Sharing: ON" : "Optional Job Location Sharing"}
+              {sharing
+                ? tx(
+                    "Live Job Location Sharing: ON",
+                    "Live Job Location Sharing: BUKAS",
+                    "Live Job Location Sharing: NAKA-ON",
+                  )
+                : tx(
+                    "Optional Job Location Sharing",
+                    "Opsyonal na Pag-share ng Lokasyon",
+                    "Opsyonal nga Pag-share sa Lokasyon",
+                  )}
             </p>
             <p className="text-[11px] text-muted-foreground">
               {sharing
                 ? geo.fix
-                  ? `Sharing browser GPS (${formatAccuracy(geo.fix.accuracy)}) for “${bookingTitle}”`
-                  : "Requesting browser GPS permission…"
-                : "Share live location only during this active job. Off by default."}
+                  ? tx(
+                      `Sharing browser GPS (${formatAccuracy(geo.fix.accuracy)}) for “${bookingTitle}”`,
+                      `Ibinabahagi ang browser GPS (${formatAccuracy(geo.fix.accuracy)}) para sa “${bookingTitle}”`,
+                      `Gina-share ang browser GPS (${formatAccuracy(geo.fix.accuracy)}) alang sa “${bookingTitle}”`,
+                    )
+                  : tx(
+                      "Requesting browser GPS permission…",
+                      "Humihingi ng pahintulot sa GPS…",
+                      "Nangayo og pagtugot sa GPS…",
+                    )
+                : tx(
+                    "Share live location only during this active job. Off by default.",
+                    "Ibahagi lang ang live location habang aktibo ang trabahong ito. Naka-off bilang default.",
+                    "I-share lang ang live location samtang aktibo kining trabahoa. Naka-off kini sa sugod.",
+                  )}
             </p>
           </div>
         </div>
@@ -745,14 +979,19 @@ export function LiveJobSharingCard({
           variant={sharing ? "destructive" : "outline"}
           onClick={toggleSharing}
         >
-          {sharing ? "Stop Sharing" : "Start Sharing"}
+          {sharing
+            ? tx("Stop Sharing", "Itigil ang Pag-share", "Hunonga ang Pag-share")
+            : tx("Start Sharing", "Simulan ang Pag-share", "Sugdi ang Pag-share")}
         </Button>
       </div>
 
       {sharing && (
         <div className="mt-3 space-y-2">
           {geo.error && (
-            <p role="alert" className="rounded-xl bg-status-declined-bg px-3 py-2 text-xs text-status-declined">
+            <p
+              role="alert"
+              className="rounded-xl bg-status-declined-bg px-3 py-2 text-xs text-status-declined"
+            >
               {geo.error}
             </p>
           )}
@@ -765,7 +1004,11 @@ export function LiveJobSharingCard({
             className="h-44"
           />
           <p className="text-[11px] text-muted-foreground">
-            Privacy note: Live sharing only runs while this tab is open and you keep sharing turned on. No background tracking is performed.
+            {tx(
+              "Privacy note: Live sharing only runs while this tab is open and you keep sharing turned on. No background tracking is performed.",
+              "Paalala sa privacy: Tumatakbo lang ang live sharing habang bukas ang tab at naka-on ito. Walang pagsubaybay sa background.",
+              "Pahinumdom sa privacy: Modagan lang ang live sharing samtang abli kining tab ug naka-on kini. Walay pagsubay sa background.",
+            )}
           </p>
         </div>
       )}

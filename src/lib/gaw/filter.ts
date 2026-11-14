@@ -8,7 +8,9 @@ export function distanceKm(a: LatLng, b: LatLng) {
   const toRad = (d: number) => (d * Math.PI) / 180;
   const dLat = toRad(b.lat - a.lat);
   const dLng = toRad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
@@ -31,14 +33,20 @@ export type WorkerWithDistance = Worker & { distance: number };
 export function filterWorkers(workers: Worker[], f: WorkerFilters): WorkerWithDistance[] {
   const q = f.query.trim().toLowerCase();
   return workers
-    .map((w) => ({ ...w, distance: roundKm(distanceKm(f.origin, w)) }))
-    .filter((w) => w.distance <= f.radius)
+    .map((w) => {
+      const rawDist = distanceKm(f.origin, w);
+      return { w, rawDist, distance: roundKm(rawDist) };
+    })
+    .filter(({ rawDist }) => rawDist <= f.radius)
+    .map(({ w, distance }) => ({ ...w, distance }))
     .filter((w) => f.category === "all" || offersService(w, f.category))
     .filter((w) => !f.availableOnly || w.available)
     .filter((w) => !f.topRatedOnly || w.rating >= 4.8)
     .filter((w) => {
       if (!q) return true;
-      const hay = [w.name, w.skill, ...w.skills, barangayName(w.barangayId)].join(" ").toLowerCase();
+      const hay = [w.name, w.skill, ...w.skills, barangayName(w.barangayId)]
+        .join(" ")
+        .toLowerCase();
       return hay.includes(q);
     })
     .sort((a, b) => Number(b.available) - Number(a.available) || a.distance - b.distance);

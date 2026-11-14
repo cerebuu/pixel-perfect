@@ -1,14 +1,39 @@
 // Seeded, fictional Davao City data for the GAW demo. All people and businesses are invented.
 
+/** The six original services, shown as shortcuts on the Hiring home. */
+export const FEATURED_CATEGORIES = ["Plumbing", "Electrical", "Carpentry", "Cleaning", "Painting", "Handyman"] as const;
+
+/** Predefined services. Users can always pick "Other Services" and type their own. */
 export const CATEGORIES = [
-  "Plumbing",
-  "Electrical",
-  "Carpentry",
-  "Cleaning",
-  "Painting",
-  "Handyman",
+  ...FEATURED_CATEGORIES,
+  "Gardening",
+  "Appliance Repair",
+  "Air Conditioning Services",
+  "Welding",
+  "Furniture Assembly",
+  "Moving Assistance",
+  "Computer Repair",
+  "Tutoring",
+  "Photography",
+  "General Labor",
 ] as const;
-export type Category = (typeof CATEGORIES)[number];
+export const OTHER_CATEGORY = "Other Services";
+/** A service name: one of CATEGORIES or any custom name a user typed. */
+export type Category = string;
+
+/** Extra suggestions for worker skills, on top of CATEGORIES. Custom skills are still allowed. */
+export const SKILL_SUGGESTIONS = [
+  ...CATEGORIES,
+  "Graphic Design",
+  "Motorcycle Repair",
+  "Laundry & Ironing",
+  "Roofing",
+  "Masonry",
+  "Tile Work",
+  "Pest Control",
+  "Event Setup",
+  "Cooking & Catering",
+];
 
 export const RADIUS_OPTIONS = [1, 3, 5, 10] as const;
 export type Radius = (typeof RADIUS_OPTIONS)[number];
@@ -329,6 +354,94 @@ export const WORKERS: Worker[] = [
     ],
     portfolio: ["TV wall mount", "Curtain rod install", "Condo fixture swap"],
   },
+  {
+    id: "w-edgar",
+    name: "Edgar Lumapas",
+    initials: "EL",
+    skill: "Motorcycle Repair",
+    skills: ["Carburetor tune-up", "Brake repair", "Oil change"],
+    barangayId: "buhangin",
+    lat: 7.1041,
+    lng: 125.6201,
+    rate: 300,
+    available: true,
+    rating: 4.8,
+    jobsDone: 67,
+    years: 9,
+    bio: "Home-service motorcycle mechanic for scooters and underbones. I come to you with tools and common parts.",
+    hours: "Mon–Sat, 8:00 AM – 6:00 PM",
+    reviews: [
+      { author: "Jomar T.", rating: 5, text: "Fixed my XRM right in front of the house.", when: "1 week ago" },
+      { author: "Aileen V.", rating: 4, text: "Fair price, explained what was wrong.", when: "1 month ago" },
+    ],
+    portfolio: ["Scooter tune-up", "Brake pad swap", "Chain & sprocket"],
+  },
+  {
+    id: "w-rhea",
+    name: "Rhea Montemayor",
+    initials: "RM",
+    skill: "Tutoring",
+    skills: ["Math", "Science", "Reading for kids"],
+    barangayId: "matina",
+    lat: 7.0591,
+    lng: 125.5934,
+    rate: 300,
+    available: true,
+    rating: 4.9,
+    jobsDone: 112,
+    years: 4,
+    bio: "Licensed teacher offering home tutoring for Grades 1–10. Patient, structured sessions with progress notes for parents.",
+    hours: "Mon–Fri, 3:00 PM – 8:00 PM",
+    reviews: [
+      { author: "Mylene F.", rating: 5, text: "My son's math grade went up in one quarter.", when: "2 weeks ago" },
+      { author: "Rodel S.", rating: 5, text: "Very patient and organized.", when: "1 month ago" },
+    ],
+    portfolio: ["Grade 6 math review", "Reading program", "Science fair coaching"],
+  },
+  {
+    id: "w-ken",
+    name: "Ken Sarmiento",
+    initials: "KS",
+    skill: "Air Conditioning Services",
+    skills: ["Aircon cleaning", "Freon recharge", "Split-type installation"],
+    barangayId: "lanang",
+    lat: 7.1012,
+    lng: 125.6342,
+    rate: 400,
+    available: false,
+    rating: 4.7,
+    jobsDone: 93,
+    years: 7,
+    bio: "Window and split-type aircon cleaning, repair, and installation for homes and small offices.",
+    hours: "Daily, 8:00 AM – 5:00 PM",
+    reviews: [
+      { author: "Lyn P.", rating: 5, text: "Our aircon is cold again, and he cleaned up after.", when: "5 days ago" },
+      { author: "Caloy B.", rating: 4, text: "On time and professional.", when: "3 weeks ago" },
+    ],
+    portfolio: ["Split-type install", "Window-type cleaning", "Office aircon PMS"],
+  },
+  {
+    id: "w-pacita",
+    name: "Pacita Dagohoy",
+    initials: "PD",
+    skill: "Gardening",
+    skills: ["Lawn mowing", "Plant care", "Landscaping"],
+    barangayId: "talomo",
+    lat: 7.0438,
+    lng: 125.5761,
+    rate: 250,
+    available: true,
+    rating: 4.6,
+    jobsDone: 58,
+    years: 10,
+    bio: "Garden upkeep, trimming, and small landscaping projects. I love working with local orchids and ornamentals.",
+    hours: "Tue–Sun, 6:00 AM – 2:00 PM",
+    reviews: [
+      { author: "Vilma Q.", rating: 5, text: "Our front yard looks amazing now.", when: "2 weeks ago" },
+      { author: "Toto E.", rating: 4, text: "Hardworking and careful with plants.", when: "1 month ago" },
+    ],
+    portfolio: ["Front yard makeover", "Orchid corner", "Hedge trimming"],
+  },
 ];
 
 export interface Job {
@@ -345,6 +458,28 @@ export interface Job {
 }
 
 export const JOBS: Job[] = [
+  {
+    id: "j-9",
+    title: "Tune up motorcycle carburetor",
+    category: "Motorcycle Repair",
+    barangayId: "buhangin",
+    poster: "Jomar Tan",
+    budget: "₱700",
+    posted: "1h ago",
+    schedule: "This week",
+    description: "Honda XRM idles roughly and stalls at stoplights. Needs carburetor cleaning and tune-up.",
+  },
+  {
+    id: "j-10",
+    title: "Math tutor for Grade 8 student",
+    category: "Tutoring",
+    barangayId: "matina",
+    poster: "The Fernandez Family",
+    budget: "₱350 / session",
+    posted: "4h ago",
+    schedule: "Weekday evenings",
+    description: "Two sessions a week to help with algebra homework and quarterly exam review.",
+  },
   {
     id: "j-1",
     title: "Fix leaking bathroom faucet",
@@ -443,4 +578,22 @@ export const DEMO_PERSONAS = [
   { name: "Maria Santos", initials: "MS" },
   { name: "Carlo Reyes", initials: "CR" },
   { name: "Ana Dimaculangan", initials: "AD" },
+  { name: "Benjie Navarro", initials: "BN" },
+  { name: "Lourdes Pido", initials: "LP" },
 ] as const;
+
+export function nearestBarangay(p: { lat: number; lng: number }) {
+  let best = BARANGAYS[0]!;
+  let bestD = Infinity;
+  for (const b of BARANGAYS) {
+    const d = (b.lat - p.lat) ** 2 + (b.lng - p.lng) ** 2;
+    if (d < bestD) {
+      bestD = d;
+      best = b;
+    }
+  }
+  return best;
+}
+
+/** Rough center of Davao City, used to warn when a GPS fix is far from the demo area. */
+export const DAVAO_CENTER = { lat: 7.0731, lng: 125.6128 };

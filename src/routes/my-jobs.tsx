@@ -1,24 +1,35 @@
-import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Bookmark,
   Briefcase,
   CalendarDays,
   CheckCircle2,
+  ClipboardCheck,
   ClipboardList,
   Eye,
   MapPin,
+  MessageSquareWarning,
   Play,
+  ShieldCheck,
   Sparkles,
   Tag,
   Trash2,
-  UserCheck,
   Wallet,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/gaw/AppLayout";
-import { formatTime } from "@/components/gaw/BookingForm";
+import {
+  BookingIssueBanner,
+  BookingLifecycleDialogs,
+  BookingReviewDisplay,
+  BookingTimeline,
+  DemoSettlementNotice,
+  TwoSidedDemoBridge,
+  useBookingDisplay,
+  type LifecycleDialogState,
+} from "@/components/gaw/BookingLifecycle";
 import { LiveJobSharingCard } from "@/components/gaw/GawMap";
 import { filterTabPillClass, subtleLinkClass } from "@/components/gaw/interactions";
 import { Avatar, EmptyState, StatusBadge } from "@/components/gaw/primitives";
@@ -31,25 +42,31 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  canCancelBooking,
   canWithdraw,
   MY_JOBS_TABS,
+  resolveBookingPersonas,
   tabForStatus,
   type ApplicationStatus,
-  type BookingAction,
   type MyJobsTab,
 } from "@/lib/gaw/bookings";
-import { barangayName, DEMO_PERSONAS, WORKERS } from "@/lib/gaw/data";
+import { barangayName } from "@/lib/gaw/data";
 import { FREE_WORKER_QUEUE_LIMIT } from "@/lib/gaw/domain";
 import { useI18n } from "@/lib/gaw/i18n";
-import { formatPeso, hasPlan, useGaw, type Booking } from "@/lib/gaw/store";
+import { hasPlan, useGaw } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
-type MyJobsSearch = { tab?: MyJobsTab | undefined };
+type MyJobsSearch = { tab?: MyJobsTab | undefined; bookingId?: string | undefined };
 
 export const Route = createFileRoute("/my-jobs")({
   validateSearch: (s: Record<string, unknown>): MyJobsSearch => {
     const valid = MY_JOBS_TABS.some((t) => t.key === s["tab"]);
-    return { tab: valid ? (s["tab"] as MyJobsTab) : undefined };
+    const rawBookingId =
+      typeof s["bookingId"] === "string" && s["bookingId"].trim() ? s["bookingId"] : undefined;
+    return {
+      tab: valid ? (s["tab"] as MyJobsTab) : undefined,
+      ...(rawBookingId ? { bookingId: rawBookingId } : {}),
+    };
   },
   head: () => ({
     meta: [
@@ -70,9 +87,10 @@ export const Route = createFileRoute("/my-jobs")({
 
 function MyJobsPage() {
   const { t } = useI18n();
+  const search = Route.useSearch();
   return (
     <AppLayout mode="work" title={t("myJobs.pageTitle")}>
-      <MyJobsManager />
+      <MyJobsManager initialTab={search.tab} initialBookingId={search.bookingId} />
     </AppLayout>
   );
 }
@@ -86,39 +104,14 @@ const APP_STATUS_BADGE: Record<ApplicationStatus, { label: string; style: string
   },
 };
 
-/** Ensure clearly separated employer persona when viewing a synced hiring booking in Worker Mode. */
-function employerDisplay(
-  b: Booking,
-  currentUserName: string | undefined,
-  employerTag = "Employer",
-  assignedWorkerLabel = "Assigned Worker",
-  translateCat: (s: string) => string = (s) => s,
-) {
-  if (b.side === "hiring") {
-    const w = WORKERS.find((x) => x.id === b.workerId);
-    const clientName =
-      b.client.name && b.client.name !== currentUserName
-        ? b.client.name
-        : `${DEMO_PERSONAS[0]!.name} (${employerTag})`;
-    const clientInitials =
-      b.client.name && b.client.name !== currentUserName
-        ? b.client.initials
-        : DEMO_PERSONAS[0]!.initials;
-    return {
-      employerName: clientName,
-      employerInitials: clientInitials,
-      workerNote: w ? `${assignedWorkerLabel}: ${w.name} (${translateCat(w.skill)})` : undefined,
-    };
-  }
-  return {
-    employerName: b.client.name,
-    employerInitials: b.client.initials,
-    workerNote: undefined,
-  };
-}
-
-function MyJobsManager() {
-  const search = Route.useSearch();
+export function MyJobsManager({
+  initialTab,
+  initialBookingId,
+}: {
+  initialTab?: MyJobsTab | undefined;
+  initialBookingId?: string | undefined;
+} = {}) {
+  const navigate = useNavigate();
   const gaw = useGaw();
   const {
     account,
@@ -128,15 +121,37 @@ function MyJobsManager() {
     savedJobIds,
     toggleSaveJob,
     plans,
-    bookingAction,
     withdrawApplication,
     simulateHire,
     workerProfile,
   } = gaw;
 
-  const { locale, t, tx, translateCategory, myJobsTabLabel, appStatusLabel } = useI18n();
-  const [activeTab, setActiveTab] = useState<MyJobsTab>(search.tab ?? "pending");
+  const { t, tx, translateCategory, myJobsTabLabel, appStatusLabel } = useI18n();
+  const { formatRate, formatBookingDate } = useBookingDisplay();
+
+  const resolvedBookingId = initialBookingId;
+  const focusedBooking = resolvedBookingId
+    ? bookings.find((b) => b.id === resolvedBookingId)
+    : undefined;
+  const defaultTab: MyJobsTab =
+    initialTab ?? (focusedBooking ? tabForStatus(focusedBooking.status) : "pending");
+
+  const [activeTab, setActiveTab] = useState<MyJobsTab>(defaultTab);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(resolvedBookingId ?? null);
+  const [dialog, setDialog] = useState<LifecycleDialogState | null>(null);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    } else if (initialBookingId) {
+      const b = bookings.find((x) => x.id === initialBookingId);
+      if (b) setActiveTab(tabForStatus(b.status));
+    }
+    if (initialBookingId) {
+      setHighlightedId(initialBookingId);
+    }
+  }, [initialTab, initialBookingId]);
 
   const selectedBooking = bookings.find((b) => b.id === selectedBookingId) ?? null;
   const savedJobs = allJobs.filter((j) => savedJobIds.includes(j.id));
@@ -157,69 +172,13 @@ function MyJobsManager() {
       ? []
       : bookings.filter((b) => tabForStatus(b.status) === activeTab);
 
-  const handleAction = (b: Booking, action: BookingAction) => {
-    bookingAction(b.id, action);
-    switch (action) {
-      case "accept":
-        toast.success(
-          tx(
-            `Accepted “${b.service}” — moved to Upcoming`,
-            `Tinanggap ang “${b.service}” — inilipat sa Nakaiskedyul`,
-            `Gidawat ang “${b.service}” — gibalhin sa Umaabot`,
-          ),
-        );
-        setActiveTab("upcoming");
-        break;
-      case "decline":
-        toast(
-          tx(
-            `Declined “${b.service}” — moved to Cancelled`,
-            `Tinanggihan ang “${b.service}” — inilipat sa Nakansela`,
-            `Wala gidawat ang “${b.service}” — gibalhin sa Gikansela`,
-          ),
-        );
-        setActiveTab("cancelled");
-        break;
-      case "start":
-        toast.success(
-          tx(
-            `Started “${b.service}” — moved to In Progress`,
-            `Sinimulan ang “${b.service}” — nasa Isinasagawa na`,
-            `Gisugdan ang “${b.service}” — gibalhin sa Ginabuhat`,
-          ),
-        );
-        setActiveTab("in_progress");
-        break;
-      case "finish":
-        toast.success(
-          tx(
-            `Marked “${b.service}” as finished — awaiting employer confirmation`,
-            `Minarkahang tapos ang “${b.service}” — naghihintay ng kumpirmasyon ng nag-book`,
-            `Gimarkahang nahuman ang “${b.service}” — naghulat sa kumpirmasyon sa nag-book`,
-          ),
-        );
-        break;
-      case "confirm":
-        toast.success(
-          tx(
-            `Employer confirmed completion of “${b.service}” — moved to Completed`,
-            `Kinumpirma ng nag-book na tapos na ang “${b.service}” — inilipat sa Tapos na`,
-            `Gikumpirma sa nag-book nga nahuman na ang “${b.service}” — gibalhin sa Nahuman`,
-          ),
-        );
-        setActiveTab("completed");
-        break;
-      case "cancel":
-        toast(
-          tx(
-            `Booking “${b.service}” cancelled`,
-            `Nakansela ang booking na “${b.service}”`,
-            `Gikansela ang booking nga “${b.service}”`,
-          ),
-        );
-        setActiveTab("cancelled");
-        break;
-    }
+  const openActionDialog = (
+    bookingId: string,
+    mode: LifecycleDialogState["mode"],
+    actorRole: "worker" | "employer" = "worker",
+  ) => {
+    setSelectedBookingId(null);
+    setDialog({ mode, bookingId, actorRole });
   };
 
   return (
@@ -617,31 +576,31 @@ function MyJobsManager() {
             />
           ) : (
             tabBookings.map((b) => {
-              const { employerName, employerInitials, workerNote } = employerDisplay(
-                b,
-                account?.name,
-                tx("Employer", "Nag-book", "Nag-book"),
-                tx("Assigned Worker", "Nakatalagang Worker", "Gitahasan nga Worker"),
-                translateCategory,
-              );
+              const personas = resolveBookingPersonas(b, {
+                currentUserName: account?.name,
+                workerSkill: workerProfile?.skill,
+                viewerRole: "worker",
+              });
               const rawCategory = b.jobId
                 ? (allJobs.find((j) => j.id === b.jobId)?.category ?? b.service)
                 : (workerProfile?.skill ?? b.service);
               const jobCategory = translateCategory(rawCategory);
-              const rateDisplay =
-                b.rateText ??
-                (b.budget
-                  ? formatPeso(b.budget)
-                  : tx("Quote requested", "Humihingi ng presyo", "Nangayo og presyo"));
               const locDisplay = b.location?.label ?? barangayName(b.barangayId);
+              const hasOpenIssue = b.issueReport?.status === "open";
+              const needsQuote = b.budget === null && !b.quotedAmount && !b.rateText;
+              const isHighlighted = highlightedId === b.id;
 
               return (
                 <article
                   key={b.id}
-                  className="animate-fade-up rounded-2xl border bg-card p-4 shadow-soft md:p-5"
+                  data-booking-id={b.id}
+                  className={cn(
+                    "animate-fade-up space-y-3 rounded-2xl border bg-card p-4 shadow-soft md:p-5",
+                    isHighlighted && "border-primary/60 ring-2 ring-primary/35",
+                  )}
                 >
                   <div className="flex items-start gap-3.5">
-                    <Avatar initials={employerInitials} />
+                    <Avatar initials={personas.employerInitials} />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
@@ -649,24 +608,31 @@ function MyJobsManager() {
                             <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
                               <Tag className="size-3" aria-hidden /> {jobCategory}
                             </span>
-                            {workerNote && (
-                              <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-xs font-semibold text-gold-foreground">
-                                {workerNote}
+                            {personas.isSyncedCrossSide && (
+                              <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-xs font-semibold text-gold-foreground dark:text-gold">
+                                {tx("Assigned:", "Naka-assign:", "Gi-assign:")}{" "}
+                                {personas.workerName}
                               </span>
                             )}
                           </div>
                           <h3 className="text-lg font-bold leading-snug">{b.service}</h3>
                           <p className="text-sm text-muted-foreground">
                             {tx("Employer:", "Nag-book:", "Nag-book:")}{" "}
-                            <strong className="text-foreground">{employerName}</strong>
+                            <strong className="text-foreground">{personas.employerName}</strong>
                           </p>
                         </div>
-                        <StatusBadge status={b.status} />
+                        <StatusBadge status={b.status} hasOpenIssue={hasOpenIssue} />
                       </div>
 
                       <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                         {b.description}
                       </p>
+
+                      {b.quoteNote && (
+                        <p className="mt-2 rounded-xl bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground">
+                          <strong>{tx("Quote note:", "Paalala:", "Nota:")}</strong> {b.quoteNote}
+                        </p>
+                      )}
 
                       <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
                         <div className="inline-flex items-center gap-1">
@@ -679,17 +645,7 @@ function MyJobsManager() {
                         <div className="inline-flex items-center gap-1">
                           <CalendarDays className="size-3.5 text-primary" aria-hidden />
                           <dt className="sr-only">{tx("Scheduled Date", "Petsa", "Petsa")}</dt>
-                          <dd>
-                            {new Date(b.date + "T00:00").toLocaleDateString(
-                              [locale, "fil-PH", "en-PH"],
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              },
-                            )}{" "}
-                            · {formatTime(b.time)}
-                          </dd>
+                          <dd>{formatBookingDate(b.date, b.time)}</dd>
                         </div>
                         <div className="inline-flex items-center gap-1 font-semibold text-foreground">
                           <Wallet className="size-3.5 text-primary" aria-hidden />
@@ -700,11 +656,16 @@ function MyJobsManager() {
                               "Gikasabotang Bayad",
                             )}
                           </dt>
-                          <dd>{rateDisplay}</dd>
+                          <dd>{formatRate(b)}</dd>
                         </div>
                       </dl>
                     </div>
                   </div>
+
+                  {/* Compact 5-Stage Lifecycle Timeline */}
+                  <BookingTimeline booking={b} variant="compact" />
+
+                  <BookingIssueBanner booking={b} />
 
                   {/* Optional Live GPS Location Sharing during active (`in_progress`) booking */}
                   {b.status === "in_progress" && (
@@ -715,8 +676,15 @@ function MyJobsManager() {
                     />
                   )}
 
-                  {/* Action Bar Enforcing Valid State Transitions */}
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+                  {b.status === "completed" && (
+                    <>
+                      <DemoSettlementNotice booking={b} />
+                      <BookingReviewDisplay booking={b} />
+                    </>
+                  )}
+
+                  {/* Single-Primary-Action Worker Control Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
                     <Button
                       type="button"
                       size="sm"
@@ -740,59 +708,122 @@ function MyJobsManager() {
                             type="button"
                             size="sm"
                             variant="outline"
-                            onClick={() => handleAction(b, "decline")}
+                            onClick={() => openActionDialog(b.id, "decline")}
                           >
                             <XCircle className="size-3.5" />{" "}
-                            {tx(
-                              "Decline Booking Request",
-                              "Tanggihan ang Request",
-                              "Balibari ang Request",
-                            )}
+                            {tx("Decline Request", "Tanggihan ang Request", "Balibari ang Request")}
                           </Button>
-                          <Button type="button" size="sm" onClick={() => handleAction(b, "accept")}>
-                            <CheckCircle2 className="size-3.5" /> {t("myJobs.acceptBooking")}
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => openActionDialog(b.id, "accept")}
+                          >
+                            <CheckCircle2 className="size-3.5" />{" "}
+                            {needsQuote
+                              ? tx(
+                                  "Propose Quote & Accept",
+                                  "Mag-alok at Tanggapin",
+                                  "Pagsugyot ug Dawata",
+                                )
+                              : t("myJobs.acceptBooking")}
                           </Button>
                         </>
                       )}
 
                       {b.status === "confirmed" && (
-                        <Button type="button" size="sm" onClick={() => handleAction(b, "start")}>
-                          <Play className="size-3.5" /> {t("myJobs.startWork")}
-                        </Button>
+                        <>
+                          {canCancelBooking(b.status) && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => openActionDialog(b.id, "cancel")}
+                            >
+                              <XCircle className="size-3.5" />{" "}
+                              {tx("Cancel", "Kanselahin", "Kanselahon")}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => openActionDialog(b.id, "start")}
+                          >
+                            <Play className="size-3.5" /> {t("myJobs.startWork")}
+                          </Button>
+                        </>
                       )}
 
                       {b.status === "in_progress" && (
-                        <Button type="button" size="sm" onClick={() => handleAction(b, "finish")}>
-                          <CheckCircle2 className="size-3.5" /> {t("myJobs.completeWork")}
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => openActionDialog(b.id, "finish")}
+                        >
+                          <ClipboardCheck className="size-3.5" /> {t("myJobs.completeWork")}
                         </Button>
                       )}
 
-                      {b.status === "awaiting_confirmation" && (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {tx(
-                              "Waiting for employer confirmation",
-                              "Naghihintay ng kumpirmasyon ng nag-book",
-                              "Naghulat sa kumpirmasyon sa nag-book",
-                            )}
-                          </span>
+                      {b.status === "awaiting_confirmation" && hasOpenIssue && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => openActionDialog(b.id, "resolve_issue")}
+                        >
+                          <ShieldCheck className="size-3.5" />{" "}
+                          {tx(
+                            "Resolve Issue & Resubmit",
+                            "Ayusin ang Isyu at Ipasa Muli",
+                            "Sulbara ang Isyu ug Ipasa Pag-usab",
+                          )}
+                        </Button>
+                      )}
+
+                      {b.status === "awaiting_confirmation" && !hasOpenIssue && (
+                        <span className="rounded-full bg-status-pending-bg px-3 py-1 text-xs font-semibold text-status-pending">
+                          {tx(
+                            "Waiting for employer confirmation",
+                            "Naghihintay ng kumpirmasyon ng nag-book",
+                            "Naghulat sa kumpirmasyon sa nag-book",
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Separated Two-Sided Demo Bridge */}
+                  <TwoSidedDemoBridge
+                    booking={b}
+                    currentRole="worker"
+                    counterpartyAction={
+                      b.status === "awaiting_confirmation" && !hasOpenIssue ? (
+                        <>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openActionDialog(b.id, "report_issue", "employer")}
+                          >
+                            <MessageSquareWarning className="size-3.5" />{" "}
+                            {tx("Simulate Issue", "I-simulate ang Isyu", "I-simulate ang Isyu")}
+                          </Button>
                           <Button
                             type="button"
                             size="sm"
                             variant="gold"
-                            onClick={() => handleAction(b, "confirm")}
+                            onClick={() => openActionDialog(b.id, "confirm", "employer")}
                           >
-                            <UserCheck className="size-3.5" />{" "}
+                            <CheckCircle2 className="size-3.5" />{" "}
                             {tx(
-                              "Confirm Completion (Employer Demo)",
-                              "Kumpirmahin na Tapos (Demo)",
-                              "Kumpirmaha nga Nahuman (Demo)",
+                              "Simulate Employer Confirm",
+                              "Kumpirmahin (Demo)",
+                              "Kumpirmaha (Demo)",
                             )}
                           </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                        </>
+                      ) : undefined
+                    }
+                  />
                 </article>
               );
             })
@@ -805,26 +836,24 @@ function MyJobsManager() {
         <DialogContent className="max-w-lg rounded-3xl">
           {selectedBooking &&
             (() => {
-              const { employerName, workerNote } = employerDisplay(
-                selectedBooking,
-                account?.name,
-                tx("Employer", "Nag-book", "Nag-book"),
-                tx("Assigned Worker", "Nakatalagang Worker", "Gitahasan nga Worker"),
-                translateCategory,
-              );
-              const rateDisplay =
-                selectedBooking.rateText ??
-                (selectedBooking.budget
-                  ? formatPeso(selectedBooking.budget)
-                  : tx("Quote requested", "Humihingi ng presyo", "Nangayo og presyo"));
+              const personas = resolveBookingPersonas(selectedBooking, {
+                currentUserName: account?.name,
+                workerSkill: workerProfile?.skill,
+                viewerRole: "worker",
+              });
               const locDisplay =
                 selectedBooking.location?.label ?? barangayName(selectedBooking.barangayId);
+              const hasOpenIssue = selectedBooking.issueReport?.status === "open";
+              const needsQuote =
+                selectedBooking.budget === null &&
+                !selectedBooking.quotedAmount &&
+                !selectedBooking.rateText;
 
               return (
                 <>
                   <DialogHeader>
                     <div className="flex items-center justify-between gap-2 pr-6">
-                      <StatusBadge status={selectedBooking.status} />
+                      <StatusBadge status={selectedBooking.status} hasOpenIssue={hasOpenIssue} />
                       <span className="text-xs text-muted-foreground">
                         Booking ID: {selectedBooking.id}
                       </span>
@@ -833,12 +862,19 @@ function MyJobsManager() {
                       {selectedBooking.service}
                     </DialogTitle>
                     <DialogDescription>
-                      {tx("Employer:", "Nag-book:", "Nag-book:")} <strong>{employerName}</strong>
-                      {workerNote ? ` · ${workerNote}` : ""}
+                      {tx("Employer:", "Nag-book:", "Nag-book:")}{" "}
+                      <strong>{personas.employerName}</strong>
+                      {personas.isSyncedCrossSide
+                        ? ` · ${tx("Assigned:", "Naka-assign:", "Gi-assign:")} ${personas.workerName}`
+                        : ""}
                     </DialogDescription>
                   </DialogHeader>
 
                   <div className="space-y-4 text-sm">
+                    <div className="rounded-2xl border bg-muted/35 p-3">
+                      <BookingTimeline booking={selectedBooking} variant="full" />
+                    </div>
+
                     <div className="rounded-2xl bg-muted p-3.5">
                       <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                         {tx("Job Description", "Paglalarawan ng Trabaho", "Deskripsyon sa Trabaho")}
@@ -858,14 +894,16 @@ function MyJobsManager() {
                           {tx("Scheduled Date & Time", "Petsa at Oras", "Petsa ug Oras")}
                         </dt>
                         <dd className="mt-0.5 font-bold text-foreground">
-                          {selectedBooking.date} · {formatTime(selectedBooking.time)}
+                          {formatBookingDate(selectedBooking.date, selectedBooking.time)}
                         </dd>
                       </div>
                       <div className="rounded-xl border p-3">
                         <dt className="text-muted-foreground">
                           {tx("Agreed Rate / Quote", "Bayad / Alok", "Bayad / Presyo")}
                         </dt>
-                        <dd className="mt-0.5 font-bold text-primary">{rateDisplay}</dd>
+                        <dd className="mt-0.5 font-bold text-primary">
+                          {formatRate(selectedBooking)}
+                        </dd>
                       </div>
                       <div className="rounded-xl border p-3">
                         <dt className="text-muted-foreground">
@@ -877,6 +915,10 @@ function MyJobsManager() {
                       </div>
                     </dl>
 
+                    <BookingIssueBanner booking={selectedBooking} />
+                    <DemoSettlementNotice booking={selectedBooking} />
+                    <BookingReviewDisplay booking={selectedBooking} />
+
                     {/* Valid State Actions inside Dialog */}
                     <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
                       {selectedBooking.status === "pending" && (
@@ -884,62 +926,80 @@ function MyJobsManager() {
                           <Button
                             type="button"
                             variant="outline"
-                            onClick={() => {
-                              handleAction(selectedBooking, "decline");
-                              setSelectedBookingId(null);
-                            }}
+                            onClick={() => openActionDialog(selectedBooking.id, "decline")}
                           >
                             {t("myJobs.declineBooking")}
                           </Button>
                           <Button
                             type="button"
-                            onClick={() => {
-                              handleAction(selectedBooking, "accept");
-                              setSelectedBookingId(null);
-                            }}
+                            onClick={() => openActionDialog(selectedBooking.id, "accept")}
                           >
-                            {t("myJobs.acceptBooking")}
+                            {needsQuote
+                              ? tx(
+                                  "Propose Quote & Accept",
+                                  "Mag-alok at Tanggapin",
+                                  "Pagsugyot ug Dawata",
+                                )
+                              : t("myJobs.acceptBooking")}
                           </Button>
                         </>
                       )}
                       {selectedBooking.status === "confirmed" && (
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            handleAction(selectedBooking, "start");
-                            setSelectedBookingId(null);
-                          }}
-                        >
-                          {t("myJobs.startWork")}
-                        </Button>
+                        <>
+                          {canCancelBooking(selectedBooking.status) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => openActionDialog(selectedBooking.id, "cancel")}
+                            >
+                              {tx("Cancel", "Kanselahin", "Kanselahon")}
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            onClick={() => openActionDialog(selectedBooking.id, "start")}
+                          >
+                            {t("myJobs.startWork")}
+                          </Button>
+                        </>
                       )}
                       {selectedBooking.status === "in_progress" && (
                         <Button
                           type="button"
-                          onClick={() => {
-                            handleAction(selectedBooking, "finish");
-                            setSelectedBookingId(null);
-                          }}
+                          onClick={() => openActionDialog(selectedBooking.id, "finish")}
                         >
                           {t("myJobs.completeWork")}
                         </Button>
                       )}
-                      {selectedBooking.status === "awaiting_confirmation" && (
+                      {selectedBooking.status === "awaiting_confirmation" && hasOpenIssue && (
+                        <Button
+                          type="button"
+                          onClick={() => openActionDialog(selectedBooking.id, "resolve_issue")}
+                        >
+                          {tx("Resolve Issue & Resubmit", "Ayusin ang Isyu", "Sulbara ang Isyu")}
+                        </Button>
+                      )}
+                      {selectedBooking.status === "awaiting_confirmation" && !hasOpenIssue && (
                         <Button
                           type="button"
                           variant="gold"
-                          onClick={() => {
-                            handleAction(selectedBooking, "confirm");
-                            setSelectedBookingId(null);
-                          }}
+                          onClick={() =>
+                            openActionDialog(selectedBooking.id, "confirm", "employer")
+                          }
                         >
                           {tx(
-                            "Confirm Completion (Employer Demo)",
-                            "Kumpirmahin na Tapos (Demo)",
-                            "Kumpirmaha nga Nahuman (Demo)",
+                            "Simulate Employer Confirm",
+                            "Kumpirmahin (Demo)",
+                            "Kumpirmaha (Demo)",
                           )}
                         </Button>
                       )}
+                      <Button asChild type="button" variant="outline">
+                        <Link to="/requests/$id" params={{ id: selectedBooking.id }}>
+                          {tx("Full Request Page", "Buong Detalye", "Tibuok nga Pahina")}
+                        </Link>
+                      </Button>
                       <Button
                         type="button"
                         variant="ghost"
@@ -954,6 +1014,40 @@ function MyJobsManager() {
             })()}
         </DialogContent>
       </Dialog>
+
+      <BookingLifecycleDialogs
+        dialog={dialog}
+        onClose={() => setDialog(null)}
+        onNavigateViewJob={(b) => setSelectedBookingId(b.id)}
+        onNavigateMyJobs={(b, targetTab) => {
+          setActiveTab(targetTab);
+          setHighlightedId(b.id);
+        }}
+        onTransitionSuccess={(b, actionMode) => {
+          if (actionMode === "accept") {
+            setActiveTab("upcoming");
+            setHighlightedId(b.id);
+          } else if (actionMode === "decline" || actionMode === "cancel") {
+            setActiveTab("cancelled");
+            setHighlightedId(b.id);
+          } else if (
+            actionMode === "start" ||
+            actionMode === "finish" ||
+            actionMode === "report_issue" ||
+            actionMode === "resolve_issue"
+          ) {
+            setActiveTab("in_progress");
+            setHighlightedId(b.id);
+          } else if (actionMode === "confirm") {
+            setActiveTab("completed");
+            setHighlightedId(b.id);
+          }
+          navigate({
+            to: "/my-jobs",
+            search: { tab: tabForStatus(b.status), bookingId: b.id },
+          });
+        }}
+      />
     </div>
   );
 }

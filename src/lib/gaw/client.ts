@@ -57,7 +57,10 @@ export interface GigValidationOutcome {
 
 export interface GawMarketplaceClient {
   readonly mode: MarketplaceClientMode;
-  estimatePricing(input: PricingEstimateInput): Promise<PricingEstimateResult>;
+  estimatePricing(
+    input: PricingEstimateInput,
+    options?: { signal?: AbortSignal },
+  ): Promise<PricingEstimateResult>;
   validateGigBeforePublish(
     input: GigValidationInput & {
       category: string;
@@ -108,7 +111,10 @@ function readConfiguredApiBaseUrl(): string | null {
 export class LocalDemoMarketplaceClient implements GawMarketplaceClient {
   readonly mode: MarketplaceClientMode = "local-demo";
 
-  async estimatePricing(input: PricingEstimateInput): Promise<PricingEstimateResult> {
+  async estimatePricing(
+    input: PricingEstimateInput,
+    _options?: { signal?: AbortSignal },
+  ): Promise<PricingEstimateResult> {
     return estimateGigPrice(input);
   }
 
@@ -156,9 +162,23 @@ export class RemoteWithFallbackMarketplaceClient extends LocalDemoMarketplaceCli
     this.baseUrl = baseUrl;
   }
 
-  override async estimatePricing(input: PricingEstimateInput): Promise<PricingEstimateResult> {
+  override async estimatePricing(
+    input: PricingEstimateInput,
+    options?: { signal?: AbortSignal },
+  ): Promise<PricingEstimateResult> {
+    // Avoid firing unresolvable relative fetches during SSR/Node when using same-origin mode
+    if (this.baseUrl === "" && typeof window === "undefined") {
+      return super.estimatePricing(input);
+    }
+    if (options?.signal?.aborted) {
+      return super.estimatePricing(input);
+    }
+
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2500);
+    const timer = setTimeout(() => controller.abort(), 8500);
+    const onExternalAbort = () => controller.abort();
+    options?.signal?.addEventListener("abort", onExternalAbort, { once: true });
+
     try {
       const res = await fetch(`${this.baseUrl}/api/v1/pricing/estimate`, {
         method: "POST",
@@ -169,13 +189,20 @@ export class RemoteWithFallbackMarketplaceClient extends LocalDemoMarketplaceCli
           estimatedHours: input.estimatedHours,
           urgency: input.urgency,
           requiredSkills: input.requiredSkills,
-          title: input.title,
-          description: input.description,
-          barangay: input.barangay,
+          ...(input.title?.trim() ? { title: input.title.trim().slice(0, 160) } : {}),
+          ...(input.description?.trim()
+            ? { description: input.description.trim().slice(0, 2000) }
+            : {}),
+          ...(input.barangay?.trim() ? { barangay: input.barangay.trim().slice(0, 120) } : {}),
         }),
       });
 
       const contentType = res.headers.get("content-type") ?? "";
+      // Rate limit (429) & server/upstream errors degrade cleanly to local fair-pay guidance
+      if (res.status === 429) {
+        return super.estimatePricing(input);
+      }
+
       if (res.status >= 400 && res.status < 500 && contentType.includes("application/json")) {
         const errBody = (await res.json()) as {
           error?: { code?: string; message?: string; details?: unknown };
@@ -199,15 +226,20 @@ export class RemoteWithFallbackMarketplaceClient extends LocalDemoMarketplaceCli
       return super.estimatePricing(input);
     } finally {
       clearTimeout(timer);
+      options?.signal?.removeEventListener("abort", onExternalAbort);
     }
   }
 }
 
 export function createGawMarketplaceClient(): GawMarketplaceClient {
   const baseUrl = readConfiguredApiBaseUrl();
-  return baseUrl
-    ? new RemoteWithFallbackMarketplaceClient(baseUrl)
-    : new LocalDemoMarketplaceClient();
+  if (baseUrl) {
+    return new RemoteWithFallbackMarketplaceClient(baseUrl);
+  }
+  if (typeof window !== "undefined") {
+    return new RemoteWithFallbackMarketplaceClient("");
+  }
+  return new LocalDemoMarketplaceClient();
 }
 
 export const gawMarketplaceClient = createGawMarketplaceClient();

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BookingsRouteImport } from './routes/bookings'
 import { Route as FindRouteImport } from './routes/find'
+import { Route as GigsRouteImport } from './routes/gigs'
 import { Route as HireRouteImport } from './routes/hire'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ModeRouteImport } from './routes/mode'
@@ -26,6 +27,7 @@ import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as JobsIdRouteImport } from './routes/jobs.$id'
 import { Route as RequestsIdRouteImport } from './routes/requests.$id'
 import { Route as WorkersIdRouteImport } from './routes/workers.$id'
+import { Route as ApiV1PricingEstimateRouteImport } from './routes/api.v1.pricing.estimate'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +42,11 @@ const BookingsRoute = BookingsRouteImport.update({
 const FindRoute = FindRouteImport.update({
   id: '/find',
   path: '/find',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GigsRoute = GigsRouteImport.update({
+  id: '/gigs',
+  path: '/gigs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HireRoute = HireRouteImport.update({
@@ -112,11 +119,17 @@ const WorkersIdRoute = WorkersIdRouteImport.update({
   path: '/workers/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1PricingEstimateRoute = ApiV1PricingEstimateRouteImport.update({
+  id: '/api/v1/pricing/estimate',
+  path: '/api/v1/pricing/estimate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/bookings': typeof BookingsRoute
   '/find': typeof FindRoute
+  '/gigs': typeof GigsRoute
   '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
@@ -131,11 +144,13 @@ export interface FileRoutesByFullPath {
   '/requests/$id': typeof RequestsIdRoute
   '/workers/$id': typeof WorkersIdRoute
   '/jobs/': typeof JobsIndexRoute
+  '/api/v1/pricing/estimate': typeof ApiV1PricingEstimateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bookings': typeof BookingsRoute
   '/find': typeof FindRoute
+  '/gigs': typeof GigsRoute
   '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
@@ -150,12 +165,14 @@ export interface FileRoutesByTo {
   '/requests/$id': typeof RequestsIdRoute
   '/workers/$id': typeof WorkersIdRoute
   '/jobs': typeof JobsIndexRoute
+  '/api/v1/pricing/estimate': typeof ApiV1PricingEstimateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/bookings': typeof BookingsRoute
   '/find': typeof FindRoute
+  '/gigs': typeof GigsRoute
   '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
@@ -170,6 +187,7 @@ export interface FileRoutesById {
   '/requests/$id': typeof RequestsIdRoute
   '/workers/$id': typeof WorkersIdRoute
   '/jobs/': typeof JobsIndexRoute
+  '/api/v1/pricing/estimate': typeof ApiV1PricingEstimateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -177,6 +195,7 @@ export interface FileRouteTypes {
     | '/'
     | '/bookings'
     | '/find'
+    | '/gigs'
     | '/hire'
     | '/login'
     | '/mode'
@@ -191,11 +210,13 @@ export interface FileRouteTypes {
     | '/requests/$id'
     | '/workers/$id'
     | '/jobs/'
+    | '/api/v1/pricing/estimate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/bookings'
     | '/find'
+    | '/gigs'
     | '/hire'
     | '/login'
     | '/mode'
@@ -210,11 +231,13 @@ export interface FileRouteTypes {
     | '/requests/$id'
     | '/workers/$id'
     | '/jobs'
+    | '/api/v1/pricing/estimate'
   id:
     | '__root__'
     | '/'
     | '/bookings'
     | '/find'
+    | '/gigs'
     | '/hire'
     | '/login'
     | '/mode'
@@ -229,12 +252,14 @@ export interface FileRouteTypes {
     | '/requests/$id'
     | '/workers/$id'
     | '/jobs/'
+    | '/api/v1/pricing/estimate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BookingsRoute: typeof BookingsRoute
   FindRoute: typeof FindRoute
+  GigsRoute: typeof GigsRoute
   HireRoute: typeof HireRoute
   LoginRoute: typeof LoginRoute
   ModeRoute: typeof ModeRoute
@@ -249,6 +274,7 @@ export interface RootRouteChildren {
   RequestsIdRoute: typeof RequestsIdRoute
   WorkersIdRoute: typeof WorkersIdRoute
   JobsIndexRoute: typeof JobsIndexRoute
+  ApiV1PricingEstimateRoute: typeof ApiV1PricingEstimateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -272,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/find'
       fullPath: '/find'
       preLoaderRoute: typeof FindRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gigs': {
+      id: '/gigs'
+      path: '/gigs'
+      fullPath: '/gigs'
+      preLoaderRoute: typeof GigsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/hire': {
@@ -372,6 +405,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkersIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/pricing/estimate': {
+      id: '/api/v1/pricing/estimate'
+      path: '/api/v1/pricing/estimate'
+      fullPath: '/api/v1/pricing/estimate'
+      preLoaderRoute: typeof ApiV1PricingEstimateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -379,6 +419,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BookingsRoute: BookingsRoute,
   FindRoute: FindRoute,
+  GigsRoute: GigsRoute,
   HireRoute: HireRoute,
   LoginRoute: LoginRoute,
   ModeRoute: ModeRoute,
@@ -393,6 +434,7 @@ const rootRouteChildren: RootRouteChildren = {
   RequestsIdRoute: RequestsIdRoute,
   WorkersIdRoute: WorkersIdRoute,
   JobsIndexRoute: JobsIndexRoute,
+  ApiV1PricingEstimateRoute: ApiV1PricingEstimateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

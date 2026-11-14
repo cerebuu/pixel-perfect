@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Info, Scale, ShieldCheck, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Loader2, Scale, ShieldCheck, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   calculateSettlementBreakdown,
-  DAVAO_HOURLY_BENCHMARK_PHP,
+  DAILY_WAGE_REFERENCE,
+  HOURLY_WAGE_REFERENCE,
+  STANDARD_WORK_HOURS,
   type PricingEstimateResult,
   type SubscriptionTier,
 } from "@/lib/gaw/domain";
@@ -15,18 +17,24 @@ interface FairPayEstimateCardProps {
   estimate: PricingEstimateResult;
   offeredBudgetPhp: number | null;
   onApplyRecommended?: (amountPhp: number) => void;
+  useAiPricer?: boolean;
+  onToggleAiPricer?: (enabled: boolean) => void;
+  loadingAi?: boolean;
   compact?: boolean;
   className?: string;
 }
 
 /**
- * Displays GAW's Davao City fair-pay estimate, non-binding benchmark floor,
- * and itemized heuristic breakdown cleanly across Hiring & Working screens.
+ * Displays GAW's Davao City fair-pay estimate (Gemini AI when configured, or local
+ * Davao heuristic fallback), non-binding benchmark floor, and itemized breakdown.
  */
 export function FairPayEstimateCard({
   estimate,
   offeredBudgetPhp,
   onApplyRecommended,
+  useAiPricer = false,
+  onToggleAiPricer,
+  loadingAi = false,
   compact = false,
   className,
 }: FairPayEstimateCardProps) {
@@ -35,6 +43,7 @@ export function FairPayEstimateCard({
 
   const isBelowBenchmark =
     offeredBudgetPhp !== null && offeredBudgetPhp < estimate.minimumWageFloorPhp;
+  const isExternalAi = estimate.source === "external_ai";
 
   return (
     <div
@@ -46,14 +55,40 @@ export function FairPayEstimateCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-0.5">
-          <p className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
-            <Sparkles className="size-3.5" aria-hidden />
-            {tx(
-              "GAW Local Fair-Pay Estimate",
-              "GAW Gabay sa Patas na Presyo",
-              "GAW Giya sa Patas nga Presyo",
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
+              <Sparkles className="size-3.5" aria-hidden />
+              {tx(
+                "GAW Local Fair-Pay Estimate",
+                "GAW Gabay sa Patas na Presyo",
+                "GAW Giya sa Patas nga Presyo",
+              )}
+            </p>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                isExternalAi
+                  ? "bg-primary/15 text-primary ring-1 ring-inset ring-primary/25"
+                  : "border bg-background/70 text-muted-foreground",
+              )}
+            >
+              {isExternalAi
+                ? tx("Gemini AI Estimate", "Gemini AI Tantya", "Gemini AI Banabana")
+                : onToggleAiPricer && !useAiPricer
+                  ? tx("Manual Guide", "Manu-manong Gabay", "Manwal nga Giya")
+                  : tx("Local Guide Fallback", "Lokal na Gabay", "Lokal nga Giya")}
+            </span>
+            {loadingAi && (
+              <span
+                role="status"
+                aria-live="polite"
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground"
+              >
+                <Loader2 className="size-3 animate-spin" aria-hidden />
+                {tx("Analyzing…", "Sinusuri…", "Ginasusi…")}
+              </span>
             )}
-          </p>
+          </div>
           <p className="text-base font-extrabold text-foreground">
             {formatPeso(Math.round(estimate.suggestedMinPhp))} –{" "}
             {formatPeso(Math.round(estimate.suggestedMaxPhp))}{" "}
@@ -65,14 +100,28 @@ export function FairPayEstimateCard({
           <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
             <Scale className="size-3.5 shrink-0 text-primary/80" aria-hidden />
             {tx(
-              `Benchmark floor: ${formatPeso(estimate.minimumWageFloorPhp)} (${estimate.estimatedHours}h × ₱${DAVAO_HOURLY_BENCHMARK_PHP.toFixed(2)}/hr)`,
-              `Batayang gabay: ${formatPeso(estimate.minimumWageFloorPhp)} (${estimate.estimatedHours} oras × ₱${DAVAO_HOURLY_BENCHMARK_PHP.toFixed(2)}/oras)`,
-              `Base nga giya: ${formatPeso(estimate.minimumWageFloorPhp)} (${estimate.estimatedHours} ka oras × ₱${DAVAO_HOURLY_BENCHMARK_PHP.toFixed(2)}/oras)`,
+              `Benchmark floor: ${formatPeso(estimate.minimumWageFloorPhp)} (${estimate.estimatedHours}h × ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/hr · Daily ref: ₱${DAILY_WAGE_REFERENCE.toFixed(2)}/${STANDARD_WORK_HOURS}h)`,
+              `Batayang gabay: ${formatPeso(estimate.minimumWageFloorPhp)} (${estimate.estimatedHours} oras × ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/oras · Arawan: ₱${DAILY_WAGE_REFERENCE.toFixed(2)}/${STANDARD_WORK_HOURS}h)`,
+              `Base nga giya: ${formatPeso(estimate.minimumWageFloorPhp)} (${estimate.estimatedHours} ka oras × ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/oras · Adlaw: ₱${DAILY_WAGE_REFERENCE.toFixed(2)}/${STANDARD_WORK_HOURS}h)`,
             )}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          {onToggleAiPricer && (
+            <Button
+              type="button"
+              size="sm"
+              variant={useAiPricer ? "default" : "outline"}
+              aria-pressed={useAiPricer}
+              onClick={() => onToggleAiPricer(!useAiPricer)}
+            >
+              <Sparkles className="size-3.5" aria-hidden />
+              {useAiPricer
+                ? tx("AI Pricer On", "Naka-on ang AI", "Naka-on ang AI")
+                : tx("Use AI Pricer", "Gamitin ang AI", "Gamita ang AI")}
+            </Button>
+          )}
           {onApplyRecommended && (
             <Button
               type="button"
@@ -160,19 +209,26 @@ export function FairPayEstimateCard({
           </dl>
 
           {!compact && (
-            <p className="text-muted-foreground">
-              <strong className="text-foreground">{tx("Factors:", "Batayan:", "Basehan:")}</strong>{" "}
-              {estimate.logicalBasis}
-            </p>
+            <div className="space-y-1 text-muted-foreground">
+              <p>
+                <strong className="text-foreground">
+                  {tx("Factors:", "Batayan:", "Basehan:")}
+                </strong>{" "}
+                {estimate.logicalBasis}
+              </p>
+              {estimate.rationale && estimate.rationale !== estimate.logicalBasis && (
+                <p className="italic text-foreground/85">&ldquo;{estimate.rationale}&rdquo;</p>
+              )}
+            </div>
           )}
 
           <p className="flex items-start gap-1.5 rounded-xl bg-background/70 p-2.5 text-[11px] leading-relaxed text-muted-foreground">
             <Info className="mt-0.5 size-3.5 shrink-0 text-primary" aria-hidden />
             <span>
               {tx(
-                "Indicative local Davao estimate based on GAW's ₱508/8h (₱63.50/hr) fair-pay benchmark — guidance for independent gig quotes, not formal legal advice or a statutory employee wage mandate.",
-                "Gabay na lokal na tantya sa Davao batay sa ₱508/8h (₱63.50/oras) na fair-pay benchmark ng GAW — mungkahi lamang para sa gig quotes at hindi pormal na legal na payo o statutory wage mandate.",
-                "Lokal nga banabana sa Davao base sa ₱508/8h (₱63.50/oras) nga fair-pay benchmark sa GAW — giya lang sa gig quotes ug dili pormal nga legal nga tambag o statutory wage mandate.",
+                `Daily Reference: ₱${DAILY_WAGE_REFERENCE.toFixed(2)} (${STANDARD_WORK_HOURS}h) · Hourly Reference: ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/hr — GAW Davao fair-pay guidance for independent gig quotes, not formal legal advice or a statutory employee wage mandate.`,
+                `Gabay sa Arawang Kita: ₱${DAILY_WAGE_REFERENCE.toFixed(2)} (${STANDARD_WORK_HOURS} oras) · Bawat Oras: ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/oras — lokal na tantya ng GAW para sa mga gig quote at hindi pormal na legal na payo o statutory wage mandate.`,
+                `Adlaw-adlaw nga Giya: ₱${DAILY_WAGE_REFERENCE.toFixed(2)} (${STANDARD_WORK_HOURS} ka oras) · Matag Oras: ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/oras — lokal nga banabana sa GAW para sa gig quotes ug dili pormal nga legal nga tambag o statutory wage mandate.`,
               )}
             </span>
           </p>
@@ -280,9 +336,9 @@ export function SettlementPreviewCard({
       {perspective === "worker" && breakdown.feeProtectedByMinimumWageFloor && (
         <p className="mt-2 rounded-lg bg-status-confirmed-bg px-2.5 py-1.5 font-medium text-status-confirmed">
           {tx(
-            "Fee reduced so take-home pay stays at or above the Davao ₱63.50/hr benchmark.",
-            "Binawasan ang fee para hindi bumaba ang kita sa ₱63.50/oras na gabay.",
-            "Gikamenosan ang fee aron dili moubos ang kita sa ₱63.50/oras nga giya.",
+            `Fee reduced so take-home pay stays at or above the Davao ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/hr fair-pay reference.`,
+            `Binawasan ang fee para hindi bumaba ang kita sa ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/oras na gabay.`,
+            `Gikamenosan ang fee aron dili moubos ang kita sa ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/oras nga giya.`,
           )}
         </p>
       )}

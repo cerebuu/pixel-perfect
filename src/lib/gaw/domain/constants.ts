@@ -3,12 +3,17 @@
  * geographic bounds, categories, and freemium tier rules.
  */
 
-/** Non-binding local daily reference benchmark used by GAW Davao fair-pay heuristics (PHP). */
-export const DAVAO_DAILY_BENCHMARK_PHP = 508;
-export const DAVAO_DAILY_MIN_WAGE_PHP = DAVAO_DAILY_BENCHMARK_PHP;
-export const STANDARD_WORKDAY_HOURS = 8;
-export const DAVAO_HOURLY_BENCHMARK_PHP = DAVAO_DAILY_BENCHMARK_PHP / STANDARD_WORKDAY_HOURS;
-export const DAVAO_HOURLY_MIN_WAGE_PHP = DAVAO_HOURLY_BENCHMARK_PHP;
+/** Non-binding local daily fair-pay reference used by GAW Davao pricing heuristics (PHP). */
+export const DAILY_WAGE_REFERENCE = 540;
+export const STANDARD_WORK_HOURS = 8;
+export const HOURLY_WAGE_REFERENCE = DAILY_WAGE_REFERENCE / STANDARD_WORK_HOURS;
+
+/** Backwards-compatible domain aliases derived from the centralized reference configuration. */
+export const DAVAO_DAILY_BENCHMARK_PHP = DAILY_WAGE_REFERENCE;
+export const DAVAO_DAILY_MIN_WAGE_PHP = DAILY_WAGE_REFERENCE;
+export const STANDARD_WORKDAY_HOURS = STANDARD_WORK_HOURS;
+export const DAVAO_HOURLY_BENCHMARK_PHP = HOURLY_WAGE_REFERENCE;
+export const DAVAO_HOURLY_MIN_WAGE_PHP = HOURLY_WAGE_REFERENCE;
 
 export const DAVAO_MARKETPLACE_CENTER = {
   lat: 7.0707,

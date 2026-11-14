@@ -1,7 +1,9 @@
 import {
   CATEGORY_HOURLY_MULTIPLIERS,
-  DAVAO_DAILY_BENCHMARK_PHP,
-  DAVAO_HOURLY_BENCHMARK_PHP,
+  DAILY_WAGE_REFERENCE,
+  HOURLY_WAGE_REFERENCE,
+  STANDARD_WORK_HOURS,
+  MAX_OFFERED_PRICE_PHP,
   type GigCategory,
   type UrgencyLevel,
 } from "./constants";
@@ -41,12 +43,16 @@ export interface PricingEstimateResult {
   source: "heuristic" | "external_ai";
   legalBasis: string;
   logicalBasis: string;
+  rationale?: string;
 }
 
 export interface ExternalPricingProvider {
-  estimate(
-    input: PricingEstimateInput & { minimumWageFloorPhp: number },
-  ): Promise<Partial<PricingEstimateResult> & { recommendedPhp: number }>;
+  estimate(input: PricingEstimateInput & { minimumWageFloorPhp: number }): Promise<
+    Omit<Partial<PricingEstimateResult>, "breakdown"> & {
+      recommendedPhp: number;
+      breakdown?: Partial<PricingBreakdown>;
+    }
+  >;
 }
 
 /** Typical tool wear-and-tear allowance heuristic by gig trade in Davao City. */
@@ -102,7 +108,7 @@ export function estimateGigPrice(input: PricingEstimateInput): PricingEstimateRe
     Math.max(0, netMargin - toolAllowancePhp - transportAllowancePhp),
   );
 
-  const basisSummary = `Non-binding local Davao City fair-pay estimate anchored on GAW's ₱${DAVAO_DAILY_BENCHMARK_PHP.toFixed(2)}/8h (₱${DAVAO_HOURLY_BENCHMARK_PHP.toFixed(2)}/hr) reference benchmark — indicative guide for independent gig quotes, not formal legal advice or a guaranteed statutory employee wage.`;
+  const basisSummary = `Non-binding local Davao City fair-pay estimate anchored on GAW's Daily Reference ₱${DAILY_WAGE_REFERENCE.toFixed(2)}/${STANDARD_WORK_HOURS}h (Hourly Reference ₱${HOURLY_WAGE_REFERENCE.toFixed(2)}/hr) — indicative guide for independent gig quotes, not formal legal advice or a guaranteed statutory employee wage.`;
 
   const logicalParts = [
     `${categoryMultiplier.toFixed(2)}× trade complexity (${domainCategory})`,
@@ -133,6 +139,51 @@ export function estimateGigPrice(input: PricingEstimateInput): PricingEstimateRe
   };
 }
 
+function sanitizeNonNegativeCents(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? roundToCents(value)
+    : fallback;
+}
+
+function sanitizeOptionalText(value: unknown, maxLen = 600): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().slice(0, maxLen);
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function sanitizeBreakdown(
+  rawBreakdown: Partial<PricingBreakdown> | undefined,
+  fallback: PricingBreakdown,
+  minimumWageFloorPhp: number,
+): PricingBreakdown {
+  if (!rawBreakdown || typeof rawBreakdown !== "object") {
+    return fallback;
+  }
+  const baseWageFloorPhp = Math.max(
+    minimumWageFloorPhp,
+    sanitizeNonNegativeCents(rawBreakdown.baseWageFloorPhp, fallback.baseWageFloorPhp),
+  );
+  return {
+    baseWageFloorPhp,
+    skillPremiumPhp: sanitizeNonNegativeCents(
+      rawBreakdown.skillPremiumPhp,
+      fallback.skillPremiumPhp,
+    ),
+    toolAllowancePhp: sanitizeNonNegativeCents(
+      rawBreakdown.toolAllowancePhp,
+      fallback.toolAllowancePhp,
+    ),
+    transportAllowancePhp: sanitizeNonNegativeCents(
+      rawBreakdown.transportAllowancePhp,
+      fallback.transportAllowancePhp,
+    ),
+    urgencyPremiumPhp: sanitizeNonNegativeCents(
+      rawBreakdown.urgencyPremiumPhp,
+      fallback.urgencyPremiumPhp,
+    ),
+  };
+}
+
 /**
  * Runs an optional external pricing provider (must live on a secure backend)
  * and safely clamps or falls back to the local heuristic without propagating NaN/Infinity.
@@ -154,7 +205,8 @@ export async function estimateGigPriceWithAdvisor(
     if (
       !raw ||
       !Number.isFinite(raw.recommendedPhp) ||
-      raw.recommendedPhp < heuristic.minimumWageFloorPhp
+      raw.recommendedPhp < heuristic.minimumWageFloorPhp ||
+      raw.recommendedPhp > MAX_OFFERED_PRICE_PHP
     ) {
       return heuristic;
     }
@@ -172,8 +224,18 @@ export async function estimateGigPriceWithAdvisor(
 
     const suggestedMaxPhp =
       typeof suggestedMaxRaw === "number" && Number.isFinite(suggestedMaxRaw)
-        ? roundToCents(Math.max(recommendedPhp, suggestedMaxRaw))
-        : roundToCents(recommendedPhp * 1.25);
+        ? roundToCents(Math.min(MAX_OFFERED_PRICE_PHP, Math.max(recommendedPhp, suggestedMaxRaw)))
+        : roundToCents(Math.min(MAX_OFFERED_PRICE_PHP, recommendedPhp * 1.25));
+
+    const rationale = sanitizeOptionalText(raw.rationale);
+    const legalBasis = sanitizeOptionalText(raw.legalBasis) ?? heuristic.legalBasis;
+    const logicalBasis =
+      sanitizeOptionalText(raw.logicalBasis) ?? rationale ?? heuristic.logicalBasis;
+    const breakdown = sanitizeBreakdown(
+      raw.breakdown,
+      heuristic.breakdown,
+      heuristic.minimumWageFloorPhp,
+    );
 
     return {
       ...heuristic,
@@ -181,6 +243,10 @@ export async function estimateGigPriceWithAdvisor(
       suggestedMinPhp,
       suggestedMaxPhp,
       hourlyRateRecommendedPhp: roundToCents(recommendedPhp / input.estimatedHours),
+      breakdown,
+      legalBasis,
+      logicalBasis,
+      ...(rationale ? { rationale } : {}),
       source: "external_ai",
     };
   } catch {

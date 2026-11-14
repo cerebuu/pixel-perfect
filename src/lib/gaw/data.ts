@@ -603,7 +603,9 @@ export interface Job {
   createdAt?: number;
 }
 
-type JobSeedInput = Omit<Job, "minimumRequiredPhp" | "aiRecommendedPhp">;
+type JobSeedInput = Omit<Job, "minimumRequiredPhp" | "aiRecommendedPhp"> & {
+  aiRecommendedPhp?: number;
+};
 
 /** Computes benchmark floor and deterministic fair-pay estimate consistently for every job record. */
 export function buildEnrichedJob(seed: JobSeedInput): Job {
@@ -618,10 +620,16 @@ export function buildEnrichedJob(seed: JobSeedInput): Job {
     description: seed.description,
     barangay: seed.barangayId,
   });
+  const aiRecommendedPhp =
+    typeof seed.aiRecommendedPhp === "number" &&
+    Number.isFinite(seed.aiRecommendedPhp) &&
+    seed.aiRecommendedPhp >= floor.minimumRequiredPhp
+      ? seed.aiRecommendedPhp
+      : pricing.recommendedPhp;
   return {
     ...seed,
     minimumRequiredPhp: floor.minimumRequiredPhp,
-    aiRecommendedPhp: pricing.recommendedPhp,
+    aiRecommendedPhp,
   };
 }
 

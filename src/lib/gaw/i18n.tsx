@@ -209,6 +209,7 @@ export function getMyJobsTabLabel(tab: MyJobsTab, locale: Locale = "en-PH"): str
 interface I18nValue {
   locale: Locale;
   localeOption: LocaleOption;
+  ready: boolean;
   setLocale: (next: Locale) => void;
   t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
   tx: (en: string, fil: string, ceb: string, vars?: Record<string, string | number>) => string;
@@ -234,10 +235,17 @@ function readInitialLocale(): Locale {
   return DEFAULT_LOCALE;
 }
 
-export function I18nProvider({ children }: { children: ReactNode }) {
+export function I18nProvider({
+  children,
+  initialLocale = DEFAULT_LOCALE,
+}: {
+  children: ReactNode;
+  initialLocale?: Locale;
+}) {
   // Start with DEFAULT_LOCALE so SSR and initial client hydration never diverge;
   // stored preference applies immediately in useEffect after hydration.
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const stored = readInitialLocale();
@@ -245,6 +253,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     if (typeof document !== "undefined") {
       document.documentElement.lang = stored;
     }
+    setReady(true);
   }, []);
 
   const setLocale = useCallback((next: Locale) => {
@@ -267,6 +276,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return {
       locale,
       localeOption,
+      ready,
       setLocale,
       t: (key, vars) => translate(locale, key, vars),
       tx: (en, fil, ceb, vars) => {
@@ -287,7 +297,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         }
       },
     };
-  }, [locale, setLocale]);
+  }, [locale, ready, setLocale]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
@@ -295,6 +305,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 const FALLBACK_I18N: I18nValue = {
   locale: DEFAULT_LOCALE,
   localeOption: SUPPORTED_LOCALES[0]!,
+  ready: true,
   setLocale: () => {},
   t: (key, vars) => translate(DEFAULT_LOCALE, key, vars),
   tx: (en, _fil, _ceb, vars) => interpolate(en, vars),

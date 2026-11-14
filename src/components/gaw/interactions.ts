@@ -96,3 +96,84 @@ export const subtleLinkClass = cn(
 
 export const subtleArrowIconClass =
   "size-4 transition-transform duration-180 ease-out group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0";
+
+export type TooltipPlacement = "right" | "bottom" | "top";
+
+export interface ProTooltipPlacement {
+  side: TooltipPlacement;
+  maxWidth: number;
+}
+
+export interface TooltipViewportBounds {
+  rect: { top: number; bottom: number; left: number; right: number; height?: number };
+  viewportWidth: number;
+  viewportHeight: number;
+  sideOffset?: number;
+  collisionPadding?: number;
+  minRightWidth?: number;
+  minVerticalHeight?: number;
+}
+
+/**
+ * Computes the optimal viewport-safe placement for the GAW Pro tooltip using
+ * strict priority RIGHT -> BOTTOM -> TOP (never placing on the left):
+ * 1) `right` when horizontal gutter and vertical clearance fit inside the viewport;
+ * 2) `bottom` when vertical clearance below the button fits;
+ * 3) `top` when vertical room below is constrained.
+ */
+export function resolveProTooltipPlacement({
+  rect,
+  viewportWidth,
+  viewportHeight,
+  sideOffset = 10,
+  collisionPadding = 12,
+  minRightWidth = 136,
+  minVerticalHeight = 44,
+}: TooltipViewportBounds): ProTooltipPlacement {
+  const itemHeight = rect.height ?? Math.max(0, rect.bottom - rect.top);
+  const centerY = rect.top + itemHeight / 2;
+  const availableRight = viewportWidth - rect.right - sideOffset - collisionPadding;
+  const verticalCenterFits =
+    centerY >= collisionPadding + 24 && viewportHeight - centerY >= collisionPadding + 24;
+
+  if (viewportWidth >= 640 && availableRight >= minRightWidth && verticalCenterFits) {
+    return {
+      side: "right",
+      maxWidth: Math.min(224, Math.floor(availableRight)),
+    };
+  }
+
+  const verticalOffset = 8;
+  const availableBottom = viewportHeight - rect.bottom - verticalOffset - collisionPadding;
+  const verticalMaxWidth = Math.max(120, Math.min(224, viewportWidth - collisionPadding * 2));
+
+  if (availableBottom >= minVerticalHeight) {
+    return {
+      side: "bottom",
+      maxWidth: verticalMaxWidth,
+    };
+  }
+
+  const availableTop = rect.top - verticalOffset - collisionPadding;
+  if (availableTop >= minVerticalHeight) {
+    return {
+      side: "top",
+      maxWidth: verticalMaxWidth,
+    };
+  }
+
+  return {
+    side: availableBottom >= availableTop ? "bottom" : "top",
+    maxWidth: verticalMaxWidth,
+  };
+}
+
+/** Checks the user's reduced-motion preference safely across SSR and browsers. */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}

@@ -40,6 +40,15 @@
   --color-warning-hover-border: var(--warning-hover-border);
   --color-danger-hover-surface: var(--danger-hover-surface);
   --color-danger-hover-border: var(--danger-hover-border);
+  --color-premium-surface: var(--premium-surface);
+  --color-premium-border: var(--premium-border);
+  --color-premium-hover-surface: var(--premium-hover-surface);
+  --color-premium-hover-border: var(--premium-hover-border);
+  --color-premium-active-surface: var(--premium-active-surface);
+  --color-premium-active-border: var(--premium-active-border);
+  --color-premium-focus: var(--premium-focus);
+  --color-premium-icon: var(--premium-icon);
+  --color-premium-icon-hover: var(--premium-icon-hover);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -75,6 +84,8 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --shadow-soft: var(--shadow-soft-value);
   --shadow-lift: var(--shadow-lift-value);
+  --shadow-premium-hover: var(--premium-hover-glow);
+  --shadow-premium-active: var(--premium-active-glow);
   --animate-fade-up: fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-radar: radar 2.8s ease-out infinite;
 }
@@ -120,12 +131,24 @@
   --accent-foreground: oklch(0.326 0.046 188.6);
   --hover-surface: rgba(14, 112, 72, 0.09);
   --hover-surface-strong: rgba(14, 112, 72, 0.14);
-  --hover-border: rgba(14, 112, 72, 0.30);
+  --hover-border: rgba(14, 112, 72, 0.3);
   --warning: oklch(0.54 0.14 70);
   --warning-hover-surface: rgba(217, 148, 22, 0.12);
   --warning-hover-border: rgba(217, 148, 22, 0.32);
   --danger-hover-surface: rgba(209, 67, 67, 0.09);
   --danger-hover-border: rgba(209, 67, 67, 0.25);
+  --premium-surface: rgba(245, 180, 60, 0.08);
+  --premium-border: rgba(217, 148, 22, 0.28);
+  --premium-hover-surface: rgba(245, 180, 60, 0.14);
+  --premium-hover-border: rgba(217, 148, 22, 0.54);
+  --premium-active-surface: rgba(245, 180, 60, 0.2);
+  --premium-active-border: rgba(180, 105, 14, 0.58);
+  --premium-focus: rgba(217, 148, 22, 0.88);
+  --premium-icon: #c27808;
+  --premium-icon-hover: #9a5a04;
+  --premium-hover-glow:
+    0 4px 12px -4px rgba(217, 148, 22, 0.22), 0 0 10px -2px rgba(245, 180, 60, 0.14);
+  --premium-active-glow: 0 2px 8px -3px rgba(180, 105, 14, 0.18);
   --destructive: oklch(0.55 0.19 27);
   --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.915 0.012 150);
@@ -145,8 +168,10 @@
   --status-declined-bg: oklch(0.95 0.03 25);
   --status-completed: oklch(0.4 0.06 230);
   --status-completed-bg: oklch(0.94 0.02 230);
-  --shadow-soft-value: 0 1px 2px oklch(0.271 0.027 180 / 6%), 0 4px 16px -6px oklch(0.271 0.027 180 / 10%);
-  --shadow-lift-value: 0 2px 4px oklch(0.271 0.027 180 / 6%), 0 18px 40px -16px oklch(0.326 0.046 188.6 / 30%);
+  --shadow-soft-value:
+    0 1px 2px oklch(0.271 0.027 180 / 6%), 0 4px 16px -6px oklch(0.271 0.027 180 / 10%);
+  --shadow-lift-value:
+    0 2px 4px oklch(0.271 0.027 180 / 6%), 0 18px 40px -16px oklch(0.326 0.046 188.6 / 30%);
   --chart-1: oklch(0.483 0.106 159.2);
   --chart-2: oklch(0.812 0.144 78.4);
   --chart-3: oklch(0.326 0.046 188.6);
@@ -177,62 +202,74 @@
    * Premium Gold:         #F4B544
    * Error / Alert:        #F08079
    */
-  --background: #0D1512;
-  --foreground: #F3F7F4;
+  --background: #0d1512;
+  --foreground: #f3f7f4;
   --card: #192820;
-  --card-foreground: #F3F7F4;
-  --popover: #22352A;
-  --popover-foreground: #F3F7F4;
-  --primary: #43C486;
+  --card-foreground: #f3f7f4;
+  --popover: #22352a;
+  --popover-foreground: #f3f7f4;
+  --primary: #43c486;
   --primary-foreground: #071910;
-  --secondary: #22352A;
-  --secondary-foreground: #8CE8B8;
-  --muted: #111F19;
-  --muted-foreground: #B5C8BC;
+  --secondary: #22352a;
+  --secondary-foreground: #8ce8b8;
+  --muted: #111f19;
+  --muted-foreground: #b5c8bc;
   --accent: #264033;
-  --accent-foreground: #FFFFFF;
+  --accent-foreground: #ffffff;
   --hover-surface: rgba(67, 196, 134, 0.13);
-  --hover-surface-strong: rgba(67, 196, 134, 0.20);
+  --hover-surface-strong: rgba(67, 196, 134, 0.2);
   --hover-border: rgba(67, 196, 134, 0.28);
-  --warning: #F4B544;
+  --warning: #f4b544;
   --warning-hover-surface: rgba(244, 181, 68, 0.13);
   --warning-hover-border: rgba(244, 181, 68, 0.28);
   --danger-hover-surface: rgba(240, 128, 121, 0.14);
   --danger-hover-border: rgba(240, 128, 121, 0.28);
-  --destructive: #F08079;
+  --premium-surface: rgba(245, 180, 60, 0.07);
+  --premium-border: rgba(245, 180, 60, 0.25);
+  --premium-hover-surface: rgba(245, 180, 60, 0.13);
+  --premium-hover-border: rgba(244, 181, 68, 0.54);
+  --premium-active-surface: rgba(245, 180, 60, 0.19);
+  --premium-active-border: rgba(244, 181, 68, 0.62);
+  --premium-focus: rgba(244, 181, 68, 0.92);
+  --premium-icon: #f5b43c;
+  --premium-icon-hover: #fad075;
+  --premium-hover-glow:
+    0 6px 16px -6px rgba(244, 181, 68, 0.28), 0 0 12px -2px rgba(245, 180, 60, 0.16);
+  --premium-active-glow: 0 2px 10px -4px rgba(244, 181, 68, 0.22);
+  --destructive: #f08079;
   --destructive-foreground: #190605;
-  --border: #34483A;
-  --input: #34483A;
-  --ring: #43C486;
-  --deep: #123C39;
-  --deep-foreground: #F3F7F4;
-  --deep-muted: #B5C8BC;
-  --gold: #F4B544;
-  --gold-foreground: #1B1304;
-  --gold-soft: #1E3126;
-  --status-pending: #F7C86A;
-  --status-pending-bg: #2B2210;
-  --status-confirmed: #5EE09E;
-  --status-confirmed-bg: #132C20;
-  --status-declined: #F08079;
-  --status-declined-bg: #2E1616;
-  --status-completed: #7EC3F8;
+  --border: #34483a;
+  --input: #34483a;
+  --ring: #43c486;
+  --deep: #123c39;
+  --deep-foreground: #f3f7f4;
+  --deep-muted: #b5c8bc;
+  --gold: #f4b544;
+  --gold-foreground: #1b1304;
+  --gold-soft: #1e3126;
+  --status-pending: #f7c86a;
+  --status-pending-bg: #2b2210;
+  --status-confirmed: #5ee09e;
+  --status-confirmed-bg: #132c20;
+  --status-declined: #f08079;
+  --status-declined-bg: #2e1616;
+  --status-completed: #7ec3f8;
   --status-completed-bg: #122534;
   --shadow-soft-value: 0 1px 2px rgba(0, 0, 0, 0.45), 0 8px 24px -8px rgba(0, 0, 0, 0.55);
   --shadow-lift-value: 0 4px 12px rgba(0, 0, 0, 0.5), 0 22px 48px -16px rgba(0, 0, 0, 0.72);
-  --chart-1: #43C486;
-  --chart-2: #F4B544;
-  --chart-3: #123C39;
-  --chart-4: #6DD3A0;
-  --chart-5: #B5C8BC;
-  --sidebar: #111F19;
-  --sidebar-foreground: #F3F7F4;
-  --sidebar-primary: #43C486;
+  --chart-1: #43c486;
+  --chart-2: #f4b544;
+  --chart-3: #123c39;
+  --chart-4: #6dd3a0;
+  --chart-5: #b5c8bc;
+  --sidebar: #111f19;
+  --sidebar-foreground: #f3f7f4;
+  --sidebar-primary: #43c486;
   --sidebar-primary-foreground: #071910;
-  --sidebar-accent: #22352A;
-  --sidebar-accent-foreground: #F3F7F4;
-  --sidebar-border: #34483A;
-  --sidebar-ring: #43C486;
+  --sidebar-accent: #22352a;
+  --sidebar-accent-foreground: #f3f7f4;
+  --sidebar-border: #34483a;
+  --sidebar-ring: #43c486;
 }
 
 @layer base {
@@ -249,7 +286,13 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+
+  /* Apply theme color crossfade only after initial startup finishes so SSR/boot never fades through fallback colors */
+  html[data-gaw-booted="true"] body {
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease;
   }
 
   :focus-visible {
@@ -262,8 +305,10 @@
     *::before,
     *::after {
       animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      transition-delay: 0ms !important;
       scroll-behavior: auto !important;
     }
   }
@@ -280,7 +325,10 @@
   padding-inline: 0.875rem;
   font-size: 0.9375rem;
   color: var(--color-foreground);
-  transition: border-color 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-out;
+  transition:
+    border-color 0.15s ease-out,
+    box-shadow 0.15s ease-out,
+    background-color 0.15s ease-out;
   &:hover:not(:disabled) {
     border-color: var(--hover-border);
   }
@@ -297,56 +345,74 @@
 
 .dark select.field option {
   background-color: #192820;
-  color: #F3F7F4;
+  color: #f3f7f4;
 }
 
 /* Subtle contour lines inspired by Mt. Apo terrain, for deep-green panels. */
 @utility bg-contour {
   background-color: var(--color-deep);
   background-image:
-    radial-gradient(circle at 85% 15%, color-mix(in oklab, var(--color-gold) 22%, transparent) 0, transparent 38%),
-    repeating-radial-gradient(circle at 100% 0%, transparent 0 22px, color-mix(in oklab, var(--color-deep-foreground) 6%, transparent) 22px 23px);
+    radial-gradient(
+      circle at 85% 15%,
+      color-mix(in oklab, var(--color-gold) 22%, transparent) 0,
+      transparent 38%
+    ),
+    repeating-radial-gradient(
+      circle at 100% 0%,
+      transparent 0 22px,
+      color-mix(in oklab, var(--color-deep-foreground) 6%, transparent) 22px 23px
+    );
 }
 
 .dark .bg-contour {
-  border: 1px solid #2A473E;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-lift-value);
+  border: 1px solid #2a473e;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    var(--shadow-lift-value);
 }
 
 @utility bg-gold-sheen {
-  background-image: linear-gradient(135deg, var(--color-gold-soft), color-mix(in oklab, var(--color-gold) 35%, var(--color-card)));
+  background-image: linear-gradient(
+    135deg,
+    var(--color-gold-soft),
+    color-mix(in oklab, var(--color-gold) 35%, var(--color-card))
+  );
 }
 
 .dark .bg-gold-sheen {
-  background-image: linear-gradient(135deg, #1E3126 0%, #26392C 55%, #192820 100%);
+  background-image: linear-gradient(135deg, #1e3126 0%, #26392c 55%, #192820 100%);
   border: 1px solid rgba(244, 181, 68, 0.35);
-  color: #F4B544;
+  color: #f4b544;
 }
 
 .dark .bg-gold-soft {
   background-color: rgba(244, 181, 68, 0.12);
   border-color: rgba(244, 181, 68, 0.28);
-  color: #F4B544;
+  color: #f4b544;
 }
 
 /* Leaflet map container & dark-theme control styling (no distorting invert filter) */
 .leaflet-container {
   font-family: var(--font-sans);
   z-index: 10;
-  background-color: #E6ECE8;
+  background-color: #e6ece8;
 }
 
 .leaflet-control-zoom a {
-  transition: background-color 0.16s ease-out, color 0.16s ease-out;
+  transition:
+    background-color 0.16s ease-out,
+    color 0.16s ease-out;
 }
 
 .leaflet-control-zoom a:hover {
-  background-color: #EDF7F1 !important;
-  color: #0E7048 !important;
+  background-color: #edf7f1 !important;
+  color: #0e7048 !important;
 }
 
 .gaw-worker-marker button {
-  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease-out;
+  transition:
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.16s ease-out;
 }
 
 .gaw-worker-marker button:hover {
@@ -354,41 +420,41 @@
 }
 
 .dark .leaflet-container {
-  background-color: #0D1512;
+  background-color: #0d1512;
 }
 
 .dark .leaflet-control-zoom {
-  border: 1px solid #34483A !important;
+  border: 1px solid #34483a !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
 }
 
 .dark .leaflet-control-zoom a {
-  background-color: #22352A !important;
-  color: #F3F7F4 !important;
-  border-bottom-color: #34483A !important;
+  background-color: #22352a !important;
+  color: #f3f7f4 !important;
+  border-bottom-color: #34483a !important;
 }
 
 .dark .leaflet-control-zoom a:hover {
-  background-color: #2C4436 !important;
-  color: #43C486 !important;
+  background-color: #2c4436 !important;
+  color: #43c486 !important;
 }
 
 .dark .leaflet-control-attribution {
   background-color: rgba(17, 31, 25, 0.88) !important;
-  color: #B5C8BC !important;
-  border-top: 1px solid #34483A !important;
-  border-left: 1px solid #34483A !important;
+  color: #b5c8bc !important;
+  border-top: 1px solid #34483a !important;
+  border-left: 1px solid #34483a !important;
   backdrop-filter: blur(6px);
 }
 
 .dark .leaflet-control-attribution a {
-  color: #43C486 !important;
+  color: #43c486 !important;
 }
 
 .dark .leaflet-tooltip {
-  background-color: #22352A !important;
-  color: #F3F7F4 !important;
-  border: 1px solid #34483A !important;
+  background-color: #22352a !important;
+  color: #f3f7f4 !important;
+  border: 1px solid #34483a !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55) !important;
   border-radius: 0.625rem !important;
   padding: 0.35rem 0.6rem !important;
@@ -396,5 +462,183 @@
 }
 
 .dark .leaflet-tooltip-top:before {
-  border-top-color: #22352A !important;
+  border-top-color: #22352a !important;
+}
+
+/* ==========================================================================
+   THE GAW CONNECTION — Signature Startup Screen Motion (GPU-composited)
+   ========================================================================== */
+@keyframes gaw-connect-aura {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes gaw-connect-emblem {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes gaw-connect-arc {
+  from {
+    stroke-dashoffset: 1;
+    opacity: 0.18;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes gaw-connect-node {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  to {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+
+@keyframes gaw-connect-halo {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(0.88);
+  }
+  38% {
+    opacity: 0.36;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(1.24);
+  }
+}
+
+@keyframes gaw-connect-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes gaw-connect-bridge {
+  from {
+    opacity: 0;
+    transform: scaleX(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes gaw-connect-sweep {
+  0% {
+    transform: translate3d(-110%, 0, 0);
+  }
+  100% {
+    transform: translate3d(240%, 0, 0);
+  }
+}
+
+.gaw-startup-aura {
+  animation: gaw-connect-aura 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gaw-startup-emblem {
+  animation: gaw-connect-emblem 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
+}
+
+.gaw-startup-arc {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: gaw-connect-arc 0.46s cubic-bezier(0.22, 1, 0.36, 1) 0.14s both;
+}
+
+.gaw-startup-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gaw-connect-node 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+.gaw-startup-halo {
+  animation: gaw-connect-halo 0.62s cubic-bezier(0.22, 1, 0.36, 1) 0.44s both;
+}
+
+.gaw-startup-wordmark {
+  animation: gaw-connect-rise 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+}
+
+.gaw-startup-bridge {
+  transform-origin: center;
+  animation: gaw-connect-bridge 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
+}
+
+.gaw-startup-tagline {
+  animation: gaw-connect-rise 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.34s both;
+}
+
+.gaw-startup-status {
+  animation: gaw-connect-rise 0.3s ease-out 0.38s both;
+}
+
+.gaw-startup-progress-bar {
+  animation: gaw-connect-sweep 1.25s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gaw-startup-aura,
+  .gaw-startup-emblem,
+  .gaw-startup-wordmark,
+  .gaw-startup-bridge,
+  .gaw-startup-tagline,
+  .gaw-startup-status {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .gaw-startup-arc {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+
+  .gaw-startup-node {
+    animation: none !important;
+    opacity: 0.95 !important;
+    transform: none !important;
+  }
+
+  .gaw-startup-halo {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .gaw-startup-progress-bar {
+    animation: none !important;
+    width: 48% !important;
+    transform: translate3d(54%, 0, 0) !important;
+    opacity: 0.78 !important;
+  }
 }

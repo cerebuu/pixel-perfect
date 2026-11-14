@@ -275,7 +275,7 @@ function WorkerProfile({ worker, isSelf }: { worker: Worker; isSelf?: boolean })
         </div>
       </aside>
 
-      <div className="fixed inset-x-0 bottom-16 z-20 border-t bg-card/95 p-3 backdrop-blur-md lg:hidden">
+      <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-20 border-t bg-card/95 p-3 backdrop-blur-md lg:hidden">
         <div className="mx-auto flex max-w-md items-center gap-3">
           <p className="shrink-0 text-sm font-bold">
             {worker.rate

@@ -1,17 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Crown,
-  Inbox,
-  MapPin,
-  Pencil,
-  ShieldCheck,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Crown, Inbox, MapPin, Pencil, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { AppLayout } from "@/components/gaw/AppLayout";
+import { useBookingDisplay } from "@/components/gaw/BookingLifecycle";
 import { JobCard } from "@/components/gaw/cards";
 import {
   interactiveNavCardClass,
@@ -20,8 +12,10 @@ import {
 } from "@/components/gaw/interactions";
 import { ProfileSetup } from "@/components/gaw/ProfileSetup";
 import { Avatar, EmptyState, SectionHeader, StatusBadge } from "@/components/gaw/primitives";
+import { VerificationStatusBanner } from "@/components/gaw/VerificationStatusBanner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { resolveBookingPersonas } from "@/lib/gaw/bookings";
 import { barangayById, barangayName, BARANGAYS } from "@/lib/gaw/data";
 import { distanceKm, roundKm } from "@/lib/gaw/filter";
 import { FREE_WORKER_QUEUE_LIMIT } from "@/lib/gaw/domain";
@@ -52,19 +46,23 @@ function WorkPage() {
   );
 }
 
-function WorkerHome() {
+export function WorkerHome() {
   const { workerProfile } = useGaw();
   const [editing, setEditing] = useState(false);
 
-  if (!workerProfile || editing) {
-    return (
-      <ProfileSetup
-        initial={workerProfile}
-        onDone={workerProfile ? () => setEditing(false) : undefined}
-      />
-    );
-  }
-  return <WorkerDashboard onEditProfile={() => setEditing(true)} />;
+  return (
+    <div className="space-y-6">
+      <VerificationStatusBanner role="work" />
+      {!workerProfile || editing ? (
+        <ProfileSetup
+          initial={workerProfile}
+          onDone={workerProfile ? () => setEditing(false) : undefined}
+        />
+      ) : (
+        <WorkerDashboard onEditProfile={() => setEditing(true)} />
+      )}
+    </div>
+  );
 }
 
 function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
@@ -81,7 +79,8 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
     plans,
     verification,
   } = useGaw();
-  const { tx, translateCategory, verifLabel, verifNext } = useI18n();
+  const { tx, translateCategory } = useI18n();
+  const { formatRate } = useBookingDisplay();
 
   if (!p || !account) return null;
 
@@ -93,7 +92,12 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
     .toUpperCase();
 
   const pending = bookings.filter((r) => r.status === "pending");
-  const upcoming = bookings.filter((r) => r.status === "confirmed" || r.status === "in_progress");
+  const upcoming = bookings.filter(
+    (r) =>
+      r.status === "confirmed" ||
+      r.status === "in_progress" ||
+      r.status === "awaiting_confirmation",
+  );
   const applied = new Set(applications.map((a) => a.jobId));
   const savedSet = new Set(savedJobIds);
   const brgy = barangayById(p.barangayId) ?? BARANGAYS[0]!;
@@ -110,7 +114,6 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
     )
     .slice(0, 3);
 
-  const idStatus = verification.identity?.status ?? "not_submitted";
   const verified = identityVerified(verification);
 
   return (
@@ -234,33 +237,6 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
         <section className="space-y-6">
-          {/* Worker Verification Status Card */}
-          <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-soft sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-secondary text-primary">
-                <ShieldCheck className="size-5" aria-hidden />
-              </span>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-bold">
-                    {tx(
-                      "Worker Verification",
-                      "Beripikasyon ng Manggagawa",
-                      "Beripikasyon sa Trabahante",
-                    )}
-                  </p>
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                    {verifLabel(idStatus)}
-                  </span>
-                </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">{verifNext(idStatus)}</p>
-              </div>
-            </div>
-            <Button asChild size="sm" variant="outline" className="shrink-0">
-              <Link to="/verify">Verification Center</Link>
-            </Button>
-          </div>
-
           <div>
             <SectionHeader
               title={tx("Nearby jobs", "Mga trabaho sa malapit", "Mga trabaho sa duol")}
@@ -323,29 +299,37 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             </p>
             {pending.length ? (
               <ul className="space-y-2.5">
-                {pending.map((r) => (
-                  <li key={r.id}>
-                    <Link
-                      to="/requests/$id"
-                      params={{ id: r.id }}
-                      className={cn(
-                        "flex items-center gap-3 rounded-2xl border bg-card p-3.5 shadow-soft",
-                        interactiveNavCardClass,
-                      )}
-                    >
-                      <Avatar initials={r.client.initials} size="sm" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold transition-colors duration-150 group-hover:text-primary">
-                          {r.service}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {r.client.name} · {r.date}, {r.time}
-                        </p>
-                      </div>
-                      <StatusBadge status={r.status} />
-                    </Link>
-                  </li>
-                ))}
+                {pending.map((r) => {
+                  const personas = resolveBookingPersonas(r, {
+                    currentUserName: account.name,
+                    workerSkill: p.skill,
+                    viewerRole: "worker",
+                  });
+                  return (
+                    <li key={r.id}>
+                      <Link
+                        to="/requests/$id"
+                        params={{ id: r.id }}
+                        className={cn(
+                          "flex items-center gap-3 rounded-2xl border bg-card p-3.5 shadow-soft",
+                          interactiveNavCardClass,
+                        )}
+                      >
+                        <Avatar initials={personas.employerInitials} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold transition-colors duration-150 group-hover:text-primary">
+                            {r.service}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {personas.employerName} · {r.date}, {r.time} ·{" "}
+                            <span className="font-semibold text-foreground">{formatRate(r)}</span>
+                          </p>
+                        </div>
+                        <StatusBadge status={r.status} />
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <EmptyState
@@ -376,6 +360,37 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
                 `${upcoming.length} aktibo/umaabot · ${applications.length} aplikasyon · ${savedJobIds.length} gi-save`,
               )}
             </p>
+            {upcoming.length > 0 && (
+              <ul className="mt-3 space-y-2">
+                {upcoming.slice(0, 3).map((job) => {
+                  const personas = resolveBookingPersonas(job, {
+                    currentUserName: account.name,
+                    workerSkill: p.skill,
+                    viewerRole: "worker",
+                  });
+                  return (
+                    <li key={job.id}>
+                      <Link
+                        to="/requests/$id"
+                        params={{ id: job.id }}
+                        className="flex items-center justify-between gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-xs transition-colors hover:border-primary/40 hover:bg-muted/70"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-foreground">{job.service}</p>
+                          <p className="truncate text-muted-foreground">
+                            {personas.employerName} · {formatRate(job)}
+                          </p>
+                        </div>
+                        <StatusBadge
+                          status={job.status}
+                          hasOpenIssue={job.issueReport?.status === "open"}
+                        />
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             <div className="mt-3 flex gap-2">
               <Button asChild size="sm" variant="soft" className="flex-1">
                 <Link to="/my-jobs">

@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { LocationPicker } from "./GawMap";
+import { prefersReducedMotion } from "./interactions";
 import { Field, LocationFilter } from "./primitives";
 import { ServicePicker } from "./ServicePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { BARANGAYS, barangayName, type Worker } from "@/lib/gaw/data";
+import { calculateMinimumWageFloor, HOURLY_WAGE_REFERENCE } from "@/lib/gaw/domain";
 import { useI18n } from "@/lib/gaw/i18n";
 import type { PlacedLocation } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
@@ -92,7 +94,10 @@ export function BookingForm({
     if (Object.keys(errs).length === 0) onReview(d);
     else {
       const target = document.getElementById(Object.keys(errs)[0] ?? "");
-      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.scrollIntoView({
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+        block: "center",
+      });
       target?.focus();
     }
   };
@@ -269,19 +274,22 @@ export function BookingForm({
             id="budget"
             label={tx("Amount (PHP)", "Halaga (PHP)", "Kantidad (PHP)")}
             error={errors.budget}
-            hint={
-              worker.rate
+            hint={(() => {
+              const twoHourFloor = calculateMinimumWageFloor(2).minimumRequiredPhp;
+              const fourHourFloor = calculateMinimumWageFloor(4).minimumRequiredPhp;
+              const hourlyText = HOURLY_WAGE_REFERENCE.toFixed(2);
+              return worker.rate
                 ? tx(
-                    `Worker rate: ₱${worker.rate}/hr · Davao 2–4h fair-pay guide (₱63.50/hr): ~₱${Math.round(Math.max(worker.rate * 2, 127)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, 254)).toLocaleString("en-PH")}`,
-                    `Rate ng manggagawa: ₱${worker.rate}/oras · Gabay sa Davao 2–4h (₱63.50/oras): ~₱${Math.round(Math.max(worker.rate * 2, 127)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, 254)).toLocaleString("en-PH")}`,
-                    `Rate sa trabahante: ₱${worker.rate}/oras · Giya sa Davao 2–4h (₱63.50/oras): ~₱${Math.round(Math.max(worker.rate * 2, 127)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, 254)).toLocaleString("en-PH")}`,
+                    `Worker rate: ₱${worker.rate}/hr · Davao 2–4h fair-pay guide (₱${hourlyText}/hr): ~₱${Math.round(Math.max(worker.rate * 2, twoHourFloor)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, fourHourFloor)).toLocaleString("en-PH")}`,
+                    `Rate ng manggagawa: ₱${worker.rate}/oras · Gabay sa Davao 2–4h (₱${hourlyText}/oras): ~₱${Math.round(Math.max(worker.rate * 2, twoHourFloor)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, fourHourFloor)).toLocaleString("en-PH")}`,
+                    `Rate sa trabahante: ₱${worker.rate}/oras · Giya sa Davao 2–4h (₱${hourlyText}/oras): ~₱${Math.round(Math.max(worker.rate * 2, twoHourFloor)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, fourHourFloor)).toLocaleString("en-PH")}`,
                   )
                 : tx(
-                    "Davao fair-pay guide (₱63.50/hr): at least ₱127 for 2h or ₱254 for 4h",
-                    "Gabay sa Davao (₱63.50/oras): ₱127+ para sa 2 oras o ₱254+ para sa 4 oras",
-                    "Giya sa Davao (₱63.50/oras): ₱127+ sa 2 ka oras o ₱254+ sa 4 ka oras",
-                  )
-            }
+                    `Davao fair-pay guide (₱${hourlyText}/hr): at least ₱${twoHourFloor.toLocaleString("en-PH")} for 2h or ₱${fourHourFloor.toLocaleString("en-PH")} for 4h`,
+                    `Gabay sa Davao (₱${hourlyText}/oras): ₱${twoHourFloor.toLocaleString("en-PH")}+ para sa 2 oras o ₱${fourHourFloor.toLocaleString("en-PH")}+ para sa 4 oras`,
+                    `Giya sa Davao (₱${hourlyText}/oras): ₱${twoHourFloor.toLocaleString("en-PH")}+ sa 2 ka oras o ₱${fourHourFloor.toLocaleString("en-PH")}+ sa 4 ka oras`,
+                  );
+            })()}
           >
             <Input
               id="budget"

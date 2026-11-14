@@ -20,7 +20,7 @@ export function roundToCents(amount: number): number {
 
 /**
  * Computes GAW's prorated fair-pay reference floor for a gig duration
- * using the ₱508/8h (₱63.50/hr) Davao local benchmark.
+ * using the ₱540/8h (₱67.50/hr) Davao local fair-pay reference.
  */
 export function calculateMinimumWageFloor(estimatedHours: number): WageFloorResult {
   if (!Number.isFinite(estimatedHours) || estimatedHours <= 0) {

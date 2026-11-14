@@ -11,8 +11,8 @@ export const Route = createFileRoute("/login")({
     ],
   }),
   component: () => (
-    <div className="min-h-screen px-5 py-8 md:py-14">
+    <main id="main-content" tabIndex={-1} className="min-h-screen px-5 py-8 outline-none md:py-14">
       <AuthForm kind="login" />
-    </div>
+    </main>
   ),
 });

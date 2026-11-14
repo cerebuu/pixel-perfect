@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { BookingForm } from "@/components/gaw/BookingForm";
 import { FairPayEstimateCard, SettlementPreviewCard } from "@/components/gaw/PricingGuide";
 import {
   calculateHaversineDistanceKm,
@@ -8,6 +9,7 @@ import {
   checkEmployeeQueueQuota,
   checkEmployerPostingQuota,
   CreateGigSchema,
+  DAILY_WAGE_REFERENCE,
   DavaoCoordsSchema,
   DAVAO_DAILY_BENCHMARK_PHP,
   DAVAO_HOURLY_BENCHMARK_PHP,
@@ -20,7 +22,10 @@ import {
   formatDistanceBadge,
   FREE_OPEN_GIGS_LIMIT,
   FREE_WORKER_QUEUE_LIMIT,
+  HOURLY_WAGE_REFERENCE,
   isWithinDavaoRegion,
+  roundToCents,
+  STANDARD_WORK_HOURS,
   toDomainCategory,
   toUiCategory,
   validateGigPrice,
@@ -30,7 +35,7 @@ import {
   LocalDemoMarketplaceClient,
   RemoteWithFallbackMarketplaceClient,
 } from "@/lib/gaw/client";
-import { BARANGAYS, JOBS, buildEnrichedJob } from "@/lib/gaw/data";
+import { BARANGAYS, JOBS, WORKERS, buildEnrichedJob } from "@/lib/gaw/data";
 import { filterAndSortJobs } from "@/lib/gaw/filter";
 import { I18nProvider, useI18n } from "@/lib/gaw/i18n";
 import {
@@ -44,22 +49,40 @@ import {
 
 describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
   describe("1. Davao Fair-Pay Benchmark & Fee Engine", () => {
-    it("computes ₱508/8h (₱63.50/hr) benchmark floors and validates offers accurately", () => {
-      expect(DAVAO_DAILY_BENCHMARK_PHP).toBe(508);
-      expect(DAVAO_HOURLY_BENCHMARK_PHP).toBe(63.5);
+    it("computes ₱540/8h (₱67.50/hr) fair-pay reference floors, scaling, rounding, and validates offers accurately", () => {
+      expect(DAILY_WAGE_REFERENCE).toBe(540);
+      expect(STANDARD_WORK_HOURS).toBe(8);
+      expect(HOURLY_WAGE_REFERENCE).toBe(67.5);
+      expect(DAILY_WAGE_REFERENCE / STANDARD_WORK_HOURS).toBe(67.5);
+      expect(DAVAO_DAILY_BENCHMARK_PHP).toBe(DAILY_WAGE_REFERENCE);
+      expect(DAVAO_HOURLY_BENCHMARK_PHP).toBe(HOURLY_WAGE_REFERENCE);
 
-      expect(calculateMinimumWageFloor(8).minimumRequiredPhp).toBe(508);
-      expect(calculateMinimumWageFloor(4).minimumRequiredPhp).toBe(254);
+      // Required prorated duration references
+      expect(calculateMinimumWageFloor(1).minimumRequiredPhp).toBe(67.5);
+      expect(calculateMinimumWageFloor(2).minimumRequiredPhp).toBe(135);
+      expect(calculateMinimumWageFloor(4).minimumRequiredPhp).toBe(270);
+      expect(calculateMinimumWageFloor(6).minimumRequiredPhp).toBe(405);
+      expect(calculateMinimumWageFloor(8).minimumRequiredPhp).toBe(540);
+      // IEEE-754 decimal durations round cleanly to exact cents
+      expect(calculateMinimumWageFloor(2.5).minimumRequiredPhp).toBe(168.75);
+      expect(calculateMinimumWageFloor(3).minimumRequiredPhp).toBe(202.5);
+      expect(calculateMinimumWageFloor(0.3).minimumRequiredPhp).toBe(20.25);
+      expect(roundToCents(0.1 + 0.2)).toBe(0.3);
       expect(() => calculateMinimumWageFloor(0)).toThrow(RangeError);
       expect(() => calculateMinimumWageFloor(Number.NaN)).toThrow(RangeError);
 
-      const ok = validateGigPrice(4, 254);
+      const ok = validateGigPrice(4, 270);
       expect(ok.isValid).toBe(true);
       expect(ok.shortfallPhp).toBe(0);
 
-      const low = validateGigPrice(4, 200);
-      expect(low.isValid).toBe(false);
-      expect(low.shortfallPhp).toBe(54);
+      // Previous ₱254/₱260 levels for 4h now fall below the updated ₱270 reference
+      const belowNewFloor = validateGigPrice(4, 260);
+      expect(belowNewFloor.isValid).toBe(false);
+      expect(belowNewFloor.shortfallPhp).toBe(10);
+
+      const pennyShort = validateGigPrice(4, 269.99);
+      expect(pennyShort.isValid).toBe(false);
+      expect(pennyShort.shortfallPhp).toBe(0.01);
       expect(() => validateGigPrice(4, -10)).toThrow(RangeError);
     });
 
@@ -81,19 +104,20 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       });
     });
 
-    it("caps worker fee so net payout stays at or above the prorated Davao benchmark floor", () => {
-      // On 4h (floor ₱254), gross ₱260 gives ₱6 headroom; raw 5% fee (₱13) is capped to ₱6
+    it("caps worker fee so net payout stays at or above the prorated Davao ₱67.50/hr reference floor", () => {
+      // On 4h (floor ₱270), gross ₱276 gives ₱6 headroom; raw 5% fee (₱13.80) is capped to ₱6
       const protectedCase = calculateSettlementBreakdown({
-        grossAmountPhp: 260,
+        grossAmountPhp: 276,
         estimatedHours: 4,
         employerTier: "FREE",
         employeeTier: "FREE",
       });
+      expect(protectedCase.minimumRequiredPhp).toBe(270);
       expect(protectedCase.feeProtectedByMinimumWageFloor).toBe(true);
       expect(protectedCase.employeeFeePhp).toBe(6);
-      expect(protectedCase.workerNetPayoutPhp).toBe(254);
-      expect(protectedCase.employerFeePhp).toBe(13);
-      expect(protectedCase.employerTotalChargePhp).toBe(273);
+      expect(protectedCase.workerNetPayoutPhp).toBe(270);
+      expect(protectedCase.employerFeePhp).toBe(13.8);
+      expect(protectedCase.employerTotalChargePhp).toBe(289.8);
 
       // Worker Pro pays 0% fee and Employer Pro pays 2% fee
       const proCase = calculateSettlementBreakdown({
@@ -107,9 +131,10 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       expect(proCase.workerNetPayoutPhp).toBe(1000);
       expect(proCase.feeProtectedByMinimumWageFloor).toBe(false);
 
+      // Old 4h floor amounts (<= ₱269) must now fail settlement breakdown validation
       expect(() =>
         calculateSettlementBreakdown({
-          grossAmountPhp: 200,
+          grossAmountPhp: 260,
           estimatedHours: 4,
           employerTier: "FREE",
           employeeTier: "FREE",
@@ -117,10 +142,22 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       ).toThrow(RangeError);
     });
 
-    it("produces deterministic heuristic quotes and guards against NaN/Infinity advisor outputs", async () => {
+    it("produces deterministic heuristic quotes anchored on ₱540/8h (₱67.50/hr) and guards advisor outputs", async () => {
+      const twoHour = estimateGigPrice({
+        category: "Plumbing",
+        estimatedHours: 2,
+        urgency: "standard",
+        requiredSkills: ["Pipe leak"],
+      });
       const standard = estimateGigPrice({
         category: "Plumbing",
         estimatedHours: 4,
+        urgency: "standard",
+        requiredSkills: ["Pipe leak"],
+      });
+      const sixHour = estimateGigPrice({
+        category: "Plumbing",
+        estimatedHours: 6,
         urgency: "standard",
         requiredSkills: ["Pipe leak"],
       });
@@ -131,9 +168,17 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
         requiredSkills: ["Pipe leak"],
       });
 
-      expect(standard.minimumWageFloorPhp).toBe(254);
+      expect(twoHour.minimumWageFloorPhp).toBe(135);
+      expect(standard.minimumWageFloorPhp).toBe(270);
+      expect(sixHour.minimumWageFloorPhp).toBe(405);
+      expect(sixHour.recommendedPhp).toBeGreaterThan(standard.recommendedPhp);
+      expect(standard.recommendedPhp).toBeGreaterThan(twoHour.recommendedPhp);
       expect(standard.recommendedPhp).toBeGreaterThanOrEqual(standard.minimumWageFloorPhp);
       expect(standard.legalBasis).toContain("Non-binding");
+      expect(standard.legalBasis).toContain("540.00");
+      expect(standard.legalBasis).toContain("67.50");
+      expect(standard.legalBasis).not.toContain("508");
+      expect(standard.legalBasis).not.toContain("63.50");
       expect(urgent.recommendedPhp).toBeGreaterThan(standard.recommendedPhp);
 
       // External provider returning NaN/Infinity for suggested bounds gets sanitized safely
@@ -161,7 +206,7 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       expect(clamped.suggestedMinPhp).toBeGreaterThanOrEqual(clamped.minimumWageFloorPhp);
       expect(clamped.suggestedMaxPhp).toBeGreaterThanOrEqual(clamped.recommendedPhp);
 
-      // External provider failing or returning below-floor price falls back to heuristic
+      // External provider returning price below the new ₱270 (4h) floor falls back to heuristic
       const belowFloorFallback = await estimateGigPriceWithAdvisor(
         {
           category: "Cleaning",
@@ -171,14 +216,27 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
         },
         {
           async estimate() {
-            return { recommendedPhp: 50 };
+            return { recommendedPhp: 260 };
           },
         },
       );
       expect(belowFloorFallback.source).toBe("heuristic");
+      expect(belowFloorFallback.minimumWageFloorPhp).toBe(270);
+      expect(belowFloorFallback.recommendedPhp).toBeGreaterThanOrEqual(270);
 
       expect(didFollowAiRecommendation(500, Number.NaN, 700)).toBe(false);
       expect(didFollowAiRecommendation(550, 500, 700)).toBe(true);
+    });
+
+    it("ensures all seeded jobs satisfy the ₱67.50/hr fair-pay reference floor", () => {
+      expect(JOBS.length).toBeGreaterThan(0);
+      for (const job of JOBS) {
+        const expectedFloor = roundToCents(job.estimatedHours * HOURLY_WAGE_REFERENCE);
+        expect(job.minimumRequiredPhp).toBe(expectedFloor);
+        if (job.budgetNum !== null) {
+          expect(job.budgetNum).toBeGreaterThanOrEqual(job.minimumRequiredPhp);
+        }
+      }
     });
 
     it("maps Pixel Perfect UI categories & custom skills bidirectionally", () => {
@@ -308,7 +366,7 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       const validation = local.validateGigBeforePublish({
         category: "Plumbing",
         estimatedHours: 4,
-        offeredPricePhp: 200,
+        offeredPricePhp: 260,
         coords: DAVAO_MARKETPLACE_CENTER,
         employerTier: "FREE",
         activeOpenGigsCount: 3,
@@ -317,6 +375,7 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       });
       expect(validation.quota.allowed).toBe(false);
       expect(validation.wageCheck?.isValid).toBe(false);
+      expect(validation.wageCheck?.shortfallPhp).toBe(10);
       expect(validation.coordsValid).toBe(true);
 
       const origFetch = globalThis.fetch;
@@ -354,22 +413,41 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
           requiredSkills: [],
         });
         expect(fallback.source).toBe("heuristic");
-        expect(fallback.minimumWageFloorPhp).toBe(254);
+        expect(fallback.minimumWageFloorPhp).toBe(270);
       } finally {
         globalThis.fetch = origFetch;
       }
     });
 
-    it("sanitizes legacy or corrupted localStorage snapshots while preserving dual Pro plans & custom jobs", () => {
+    it("sanitizes legacy or corrupted localStorage snapshots while preserving historical bookings & custom jobs", () => {
       const defaults = initialState;
 
-      // Legacy v1-like payload: single custom job missing enriched pricing/lat/lng, both Pro plans
+      // Legacy v1-like payload: single custom job missing enriched pricing/lat/lng, both Pro plans,
+      // plus a historical completed booking agreed under the earlier ₱254 reference
       const sanitized = sanitizeLoadedState(
         {
           signedIn: true,
           plans: ["worker", "employer", "invalid_plan"],
           savedJobIds: ["j-1", 42, "j-2"],
           userGps: { lat: Number.NaN, lng: 125.6, label: "bad" },
+          bookings: [
+            {
+              id: "b-historical-254",
+              side: "working",
+              workerId: "w-1",
+              client: { name: "Elena Ramos", initials: "ER" },
+              service: "Plumbing",
+              description: "Historical agreed faucet repair",
+              date: "2026-09-12",
+              time: "10:00",
+              barangayId: "matina",
+              location: null,
+              budget: 254,
+              rateText: "₱254",
+              status: "completed",
+              createdAt: 1700000000000,
+            },
+          ],
           customJobs: [
             {
               id: "j-legacy",
@@ -393,6 +471,9 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       expect(sanitized.plans).toEqual(["worker", "employer"]);
       expect(sanitized.savedJobIds).toEqual(["j-1", "j-2"]);
       expect(sanitized.userGps).toBeNull();
+      expect(sanitized.bookings).toHaveLength(1);
+      expect(sanitized.bookings[0]!.budget).toBe(254);
+      expect(sanitized.bookings[0]!.rateText).toBe("₱254");
       expect(sanitized.customJobs).toHaveLength(1);
       expect(sanitized.customJobs[0]!.budgetNum).toBe(750);
       expect(sanitized.customJobs[0]!.estimatedHours).toBeGreaterThan(0);
@@ -452,18 +533,21 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       expect(outside.result.ok).toBe(false);
       if (!outside.result.ok) expect(outside.result.error).toBe("outside_davao");
 
-      // Reject below Davao benchmark floor (4h * 63.50 = 254)
+      // Reject below Davao fair-pay floor (4h * 67.50 = 270; old 260 is rejected)
       const belowFloor = applyCreateJob(verifiedBase, {
         title: "Repair sink",
         category: "Plumbing",
         barangayId: "matina",
-        budgetNum: 200,
+        budgetNum: 260,
         estimatedHours: 4,
         schedule: "Today",
         description: "Fix leak",
       });
       expect(belowFloor.result.ok).toBe(false);
-      if (!belowFloor.result.ok) expect(belowFloor.result.error).toBe("below_benchmark");
+      if (!belowFloor.result.ok) {
+        expect(belowFloor.result.error).toBe("below_benchmark");
+        expect(belowFloor.result.message).toContain("₱270");
+      }
 
       // Free tier allows up to FREE_OPEN_GIGS_LIMIT (3) custom gigs, then blocks 4th unless Employer Pro
       let curState: GawState = verifiedBase;
@@ -530,14 +614,16 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
     });
   });
 
-  describe("4. SSR-Safe PricingGuide & Hydration Consistency", () => {
-    it("renders I18nProvider, FairPayEstimateCard, and SettlementPreviewCard cleanly via SSR", () => {
+  describe("4. SSR-Safe PricingGuide, Hiring & Working UI Consistency", () => {
+    it("renders I18nProvider, FairPayEstimateCard, BookingForm, and SettlementPreviewCard cleanly via SSR with ₱540/₱67.50", () => {
       const estimate = estimateGigPrice({
         category: "Electrical",
         estimatedHours: 4,
         urgency: "urgent",
         requiredSkills: ["Wiring"],
       });
+      const worker = WORKERS[0]!;
+      const unpricedWorker = { ...worker, rate: null };
 
       function Probe() {
         const { locale } = useI18n();
@@ -545,11 +631,31 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
           <div data-locale={locale}>
             <FairPayEstimateCard estimate={estimate} offeredBudgetPhp={200} />
             <SettlementPreviewCard
-              amountPhp={260}
+              amountPhp={276}
               estimatedHours={4}
               employerTier="FREE"
               employeeTier="FREE"
               perspective="worker"
+            />
+            <SettlementPreviewCard
+              amountPhp={276}
+              estimatedHours={4}
+              employerTier="FREE"
+              employeeTier="FREE"
+              perspective="employer"
+            />
+            <BookingForm
+              worker={unpricedWorker}
+              initial={{
+                service: unpricedWorker.skill,
+                description: "Electrical outlet inspection",
+                date: "2026-12-01",
+                time: "10:00",
+                barangayId: "matina",
+                budgetMode: "budget",
+                budget: "270",
+              }}
+              onReview={() => {}}
             />
           </div>
         );
@@ -564,8 +670,34 @@ describe("GAW × Pixel Perfect Marketplace Integration Suite", () => {
       expect(html).toContain('data-locale="en-PH"');
       expect(html).toContain("GAW Local Fair-Pay Estimate");
       expect(html).toContain('role="alert"');
+      expect(html).toContain("₱540.00");
+      expect(html).toContain("₱67.50/hr");
+      expect(html).toContain("₱270");
+      expect(html).toContain("₱135");
       expect(html).toContain("Estimated Take-Home Pay");
-      expect(html).toContain("Fee reduced so take-home pay stays at or above the Davao");
+      expect(html).toContain("Demo Fee &amp; Payout Preview");
+      expect(html).toContain("Estimated total");
+      expect(html).toContain("Fee reduced so take-home pay stays at or above the Davao ₱67.50/hr");
+      expect(html).not.toContain("508");
+      expect(html).not.toContain("63.50");
+      expect(html).not.toContain("₱127");
+      expect(html).not.toContain("₱254");
+
+      // Multilingual parity across Filipino and Bisaya
+      for (const loc of ["fil-PH", "ceb-PH"] as const) {
+        const locHtml = renderToStaticMarkup(
+          <I18nProvider initialLocale={loc}>
+            <Probe />
+          </I18nProvider>,
+        );
+        expect(locHtml).toContain(`data-locale="${loc}"`);
+        expect(locHtml).toContain("₱540.00");
+        expect(locHtml).toContain("₱67.50/oras");
+        expect(locHtml).toContain("₱270");
+        expect(locHtml).toContain("₱135");
+        expect(locHtml).not.toContain("508");
+        expect(locHtml).not.toContain("63.50");
+      }
     });
   });
 });

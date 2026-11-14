@@ -10,13 +10,36 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BookingsRouteImport } from './routes/bookings'
+import { Route as FindRouteImport } from './routes/find'
+import { Route as HireRouteImport } from './routes/hire'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ModeRouteImport } from './routes/mode'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as WorkRouteImport } from './routes/work'
+import { Route as BookWorkerIdRouteImport } from './routes/book.$workerId'
+import { Route as JobsIndexRouteImport } from './routes/jobs.index'
+import { Route as JobsIdRouteImport } from './routes/jobs.$id'
+import { Route as WorkersIdRouteImport } from './routes/workers.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookingsRoute = BookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FindRoute = FindRouteImport.update({
+  id: '/find',
+  path: '/find',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HireRoute = HireRouteImport.update({
+  id: '/hire',
+  path: '/hire',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -34,39 +57,133 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkRoute = WorkRouteImport.update({
+  id: '/work',
+  path: '/work',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BookWorkerIdRoute = BookWorkerIdRouteImport.update({
+  id: '/book/$workerId',
+  path: '/book/$workerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsIndexRoute = JobsIndexRouteImport.update({
+  id: '/jobs/',
+  path: '/jobs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JobsIdRoute = JobsIdRouteImport.update({
+  id: '/jobs/$id',
+  path: '/jobs/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkersIdRoute = WorkersIdRouteImport.update({
+  id: '/workers/$id',
+  path: '/workers/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRoute
+  '/find': typeof FindRoute
+  '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
   '/signup': typeof SignupRoute
+  '/work': typeof WorkRoute
+  '/book/$workerId': typeof BookWorkerIdRoute
+  '/jobs/$id': typeof JobsIdRoute
+  '/workers/$id': typeof WorkersIdRoute
+  '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRoute
+  '/find': typeof FindRoute
+  '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
   '/signup': typeof SignupRoute
+  '/work': typeof WorkRoute
+  '/book/$workerId': typeof BookWorkerIdRoute
+  '/jobs/$id': typeof JobsIdRoute
+  '/workers/$id': typeof WorkersIdRoute
+  '/jobs': typeof JobsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/bookings': typeof BookingsRoute
+  '/find': typeof FindRoute
+  '/hire': typeof HireRoute
   '/login': typeof LoginRoute
   '/mode': typeof ModeRoute
   '/signup': typeof SignupRoute
+  '/work': typeof WorkRoute
+  '/book/$workerId': typeof BookWorkerIdRoute
+  '/jobs/$id': typeof JobsIdRoute
+  '/workers/$id': typeof WorkersIdRoute
+  '/jobs/': typeof JobsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/mode' | '/signup'
+  fullPaths:
+    | '/'
+    | '/bookings'
+    | '/find'
+    | '/hire'
+    | '/login'
+    | '/mode'
+    | '/signup'
+    | '/work'
+    | '/book/$workerId'
+    | '/jobs/$id'
+    | '/workers/$id'
+    | '/jobs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/mode' | '/signup'
-  id: '__root__' | '/' | '/login' | '/mode' | '/signup'
+  to:
+    | '/'
+    | '/bookings'
+    | '/find'
+    | '/hire'
+    | '/login'
+    | '/mode'
+    | '/signup'
+    | '/work'
+    | '/book/$workerId'
+    | '/jobs/$id'
+    | '/workers/$id'
+    | '/jobs'
+  id:
+    | '__root__'
+    | '/'
+    | '/bookings'
+    | '/find'
+    | '/hire'
+    | '/login'
+    | '/mode'
+    | '/signup'
+    | '/work'
+    | '/book/$workerId'
+    | '/jobs/$id'
+    | '/workers/$id'
+    | '/jobs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BookingsRoute: typeof BookingsRoute
+  FindRoute: typeof FindRoute
+  HireRoute: typeof HireRoute
   LoginRoute: typeof LoginRoute
   ModeRoute: typeof ModeRoute
   SignupRoute: typeof SignupRoute
+  WorkRoute: typeof WorkRoute
+  BookWorkerIdRoute: typeof BookWorkerIdRoute
+  JobsIdRoute: typeof JobsIdRoute
+  WorkersIdRoute: typeof WorkersIdRoute
+  JobsIndexRoute: typeof JobsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -76,6 +193,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bookings': {
+      id: '/bookings'
+      path: '/bookings'
+      fullPath: '/bookings'
+      preLoaderRoute: typeof BookingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/find': {
+      id: '/find'
+      path: '/find'
+      fullPath: '/find'
+      preLoaderRoute: typeof FindRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hire': {
+      id: '/hire'
+      path: '/hire'
+      fullPath: '/hire'
+      preLoaderRoute: typeof HireRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -99,14 +237,57 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/work': {
+      id: '/work'
+      path: '/work'
+      fullPath: '/work'
+      preLoaderRoute: typeof WorkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/book/$workerId': {
+      id: '/book/$workerId'
+      path: '/book/$workerId'
+      fullPath: '/book/$workerId'
+      preLoaderRoute: typeof BookWorkerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs/': {
+      id: '/jobs/'
+      path: '/jobs'
+      fullPath: '/jobs/'
+      preLoaderRoute: typeof JobsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/jobs/$id': {
+      id: '/jobs/$id'
+      path: '/jobs/$id'
+      fullPath: '/jobs/$id'
+      preLoaderRoute: typeof JobsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workers/$id': {
+      id: '/workers/$id'
+      path: '/workers/$id'
+      fullPath: '/workers/$id'
+      preLoaderRoute: typeof WorkersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BookingsRoute: BookingsRoute,
+  FindRoute: FindRoute,
+  HireRoute: HireRoute,
   LoginRoute: LoginRoute,
   ModeRoute: ModeRoute,
   SignupRoute: SignupRoute,
+  WorkRoute: WorkRoute,
+  BookWorkerIdRoute: BookWorkerIdRoute,
+  JobsIdRoute: JobsIdRoute,
+  WorkersIdRoute: WorkersIdRoute,
+  JobsIndexRoute: JobsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

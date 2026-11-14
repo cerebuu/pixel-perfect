@@ -17,6 +17,7 @@ import { AppLayout } from "@/components/gaw/AppLayout";
 import { GAWBrand } from "@/components/gaw/GAWBrand";
 import { selectableOptionCardClass } from "@/components/gaw/interactions";
 import { Button } from "@/components/ui/button";
+import { FREE_OPEN_GIGS_LIMIT, FREE_WORKER_QUEUE_LIMIT, TIER_CONFIG } from "@/lib/gaw/domain";
 import { useI18n } from "@/lib/gaw/i18n";
 import { hasPlan, useGaw, type ProPlan } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
@@ -96,9 +97,14 @@ function ProSubscriptionExperience() {
           "Modawat ug modawat sa direktang booking request gikan sa mga residente",
         ),
         tx(
-          "Apply to open jobs on the Davao City Job Board",
-          "Mag-apply sa mga bukas na trabaho sa Davao City Job Board",
-          "Pag-apply sa mga bakanteng trabaho sa Davao City Job Board",
+          `Save up to ${FREE_WORKER_QUEUE_LIMIT} jobs in My Jobs & browse Davao openings`,
+          `Mag-save ng hanggang ${FREE_WORKER_QUEUE_LIMIT} trabaho sa Aking Trabaho`,
+          `Pag-save og hangtod ${FREE_WORKER_QUEUE_LIMIT} ka trabaho sa Akong Trabaho`,
+        ),
+        tx(
+          `Standard ${(TIER_CONFIG.FREE.employeeFeeRate * 100).toFixed(0)}% worker fee preview (protected by Davao ₱63.50/hr floor)`,
+          `Karaniwang ${(TIER_CONFIG.FREE.employeeFeeRate * 100).toFixed(0)}% fee preview (protektado ng ₱63.50/oras na gabay)`,
+          `Kasagarang ${(TIER_CONFIG.FREE.employeeFeeRate * 100).toFixed(0)}% fee preview (protektado sa ₱63.50/oras nga giya)`,
         ),
         tx(
           "Set your working service area and 1–10 km radius",
@@ -111,6 +117,16 @@ function ProSubscriptionExperience() {
           "Everything in the Free Worker Plan",
           "Lahat ng nasa Free Worker Plan",
           "Tanan nga naa sa Free Worker Plan",
+        ),
+        tx(
+          `0% Worker Service Fee in payout previews (vs ${(TIER_CONFIG.FREE.employeeFeeRate * 100).toFixed(0)}% Free)`,
+          `0% Worker Service Fee sa payout preview (vs ${(TIER_CONFIG.FREE.employeeFeeRate * 100).toFixed(0)}% Free)`,
+          `0% Worker Service Fee sa payout preview (vs ${(TIER_CONFIG.FREE.employeeFeeRate * 100).toFixed(0)}% Free)`,
+        ),
+        tx(
+          `Unlimited Saved Jobs queue in My Jobs (vs ${FREE_WORKER_QUEUE_LIMIT} slots on Free)`,
+          `Walang limit na Saved Jobs sa Aking Trabaho (vs ${FREE_WORKER_QUEUE_LIMIT} sa Free)`,
+          `Walay limit nga Saved Jobs sa Akong Trabaho (vs ${FREE_WORKER_QUEUE_LIMIT} sa Free)`,
         ),
         tx(
           "Highlighted Gold Pro Badge on your Worker Dashboard & Profile",
@@ -127,13 +143,13 @@ function ProSubscriptionExperience() {
           "Mas mataas na puwesto sa paghahanap ng mga Employer (demo preview)",
           "Mas taas nga puwesto sa pagpangita sa mga Employer (demo preview)",
         ),
-        tx(
-          "Expanded multi-skill portfolio showcase",
-          "Mas pinalawak na showcase ng mga kasanayan",
-          "Mas gipalapdan nga showcase sa mga kahanas",
-        ),
       ],
       unlockedFeatures: [
+        tx(
+          "0% worker fee preview + Unlimited Saved Jobs queue in /my-jobs",
+          "0% worker fee preview + Walang limit na Saved Jobs sa /my-jobs",
+          "0% worker fee preview + Walay limit nga Saved Jobs sa /my-jobs",
+        ),
         tx(
           "Worker Pro Crown Badge next to your name on Worker Home",
           "Worker Pro Crown Badge sa tabi ng iyong pangalan sa Worker Home",
@@ -144,20 +160,15 @@ function ProSubscriptionExperience() {
           "Buksan ang Sample Monthly Earnings & Insights widget sa Worker Home",
           "Abli ang Sample Monthly Earnings & Insights widget sa Worker Home",
         ),
-        tx(
-          "Priority Worker Pro indicator in Account Menu",
-          "Priority Worker Pro indicator sa Account Menu",
-          "Priority Worker Pro indicator sa Account Menu",
-        ),
       ],
     },
     employer: {
       key: "employer",
       title: "GAW Employer Pro",
       subtitle: tx(
-        "Faster household & small-business hiring with priority filters and saved search presets.",
-        "Mas mabilis na pag-hire para sa bahay at negosyo gamit ang priority filter at saved searches.",
-        "Mas paspas nga pag-hire alang sa balay ug negosyo gamit ang priority filter ug saved searches.",
+        "Faster household & small-business hiring with unlimited requests, lower fee previews, and priority filters.",
+        "Mas mabilis na pag-hire na may walang limit na request, mas mababang fee preview, at priority filter.",
+        "Mas paspas nga pag-hire nga may walay limit nga request, ubos nga fee preview, ug priority filter.",
       ),
       dashboardLink: "/hire",
       dashboardLabel: tx(
@@ -172,19 +183,19 @@ function ProSubscriptionExperience() {
           "Pangita og duol nga worker gamit ang barangay, GPS pin, o custom service",
         ),
         tx(
+          `Post up to ${FREE_OPEN_GIGS_LIMIT} active open service requests at a time`,
+          `Mag-post ng hanggang ${FREE_OPEN_GIGS_LIMIT} aktibong bukas na service requests`,
+          `Pag-post og hangtod ${FREE_OPEN_GIGS_LIMIT} ka aktibo nga abli nga service requests`,
+        ),
+        tx(
+          `Standard ${(TIER_CONFIG.FREE.employerFeeRate * 100).toFixed(0)}% demo fee preview & live booking tracker`,
+          `Karaniwang ${(TIER_CONFIG.FREE.employerFeeRate * 100).toFixed(0)}% demo fee preview at live booking tracker`,
+          `Kasagarang ${(TIER_CONFIG.FREE.employerFeeRate * 100).toFixed(0)}% demo fee preview ug live booking tracker`,
+        ),
+        tx(
           "Interactive map & radar discovery within 1 to 10 km",
           "Interaktibong mapa at paghahanap sa loob ng 1 hanggang 10 km",
           "Interaktibong mapa ug pagpangita sulod sa 1 hangtod 10 km",
-        ),
-        tx(
-          "Send booking requests and quotes with no platform fee",
-          "Magpadala ng booking request nang walang bayad sa platform",
-          "Pagpadala og booking request nga walay bayad sa platform",
-        ),
-        tx(
-          "Track active and completed bookings in real time",
-          "Subaybayan ang mga aktibo at natapos na booking nang real time",
-          "Bantayi ang mga aktibo ug nahuman nga booking sa tinuod nga oras",
         ),
       ],
       proBenefits: [
@@ -194,9 +205,14 @@ function ProSubscriptionExperience() {
           "Tanan nga naa sa Free Employer Plan",
         ),
         tx(
-          "Highlighted Gold Pro Badge on your Employer Dashboard",
-          "Gold Pro Badge sa iyong Employer Dashboard",
-          "Gold Pro Badge sa imong Employer Dashboard",
+          `Unlimited open service requests (vs ${FREE_OPEN_GIGS_LIMIT} on Free)`,
+          `Walang limit na bukas na service requests (vs ${FREE_OPEN_GIGS_LIMIT} sa Free)`,
+          `Walay limit nga abli nga service requests (vs ${FREE_OPEN_GIGS_LIMIT} sa Free)`,
+        ),
+        tx(
+          `Reduced ${(TIER_CONFIG.PRO.employerFeeRate * 100).toFixed(0)}% employer fee preview (vs ${(TIER_CONFIG.FREE.employerFeeRate * 100).toFixed(0)}% Free)`,
+          `Mas mababang ${(TIER_CONFIG.PRO.employerFeeRate * 100).toFixed(0)}% employer fee preview (vs ${(TIER_CONFIG.FREE.employerFeeRate * 100).toFixed(0)}% Free)`,
+          `Mas ubos nga ${(TIER_CONFIG.PRO.employerFeeRate * 100).toFixed(0)}% employer fee preview (vs ${(TIER_CONFIG.FREE.employerFeeRate * 100).toFixed(0)}% Free)`,
         ),
         tx(
           "Exclusive “Top-Rated Only (4.8★+)” filter unlocked in Nearby Finder",
@@ -204,21 +220,16 @@ function ProSubscriptionExperience() {
           "Eksklusibo nga filter nga “Top-Rated Only (4.8★+)” sa Nearby Finder",
         ),
         tx(
-          "One-click Saved Search Presets & Priority Re-booking card on Employer Home",
-          "Isang pindot na Saved Search Presets at Priority Re-booking card sa Employer Home",
-          "Usa ka pindot nga Saved Search Presets ug Priority Re-booking card sa Employer Home",
-        ),
-        tx(
-          "Dedicated household project tracking tools (demo preview)",
-          "Mga tool sa pagsubaybay ng proyekto sa bahay (demo preview)",
-          "Mga himan sa pagbantay sa proyekto sa balay (demo preview)",
+          "Highlighted Gold Pro Badge & Saved Search Presets on Employer Home",
+          "Gold Pro Badge at Saved Search Presets sa Employer Home",
+          "Gold Pro Badge ug Saved Search Presets sa Employer Home",
         ),
       ],
       unlockedFeatures: [
         tx(
-          "Employer Pro Crown Badge on Employer Home",
-          "Employer Pro Crown Badge sa Employer Home",
-          "Employer Pro Crown Badge sa Employer Home",
+          `Unlimited open requests + ${(TIER_CONFIG.PRO.employerFeeRate * 100).toFixed(0)}% fee preview across /hire and /book`,
+          `Walang limit na open requests + ${(TIER_CONFIG.PRO.employerFeeRate * 100).toFixed(0)}% fee preview`,
+          `Walay limit nga open requests + ${(TIER_CONFIG.PRO.employerFeeRate * 100).toFixed(0)}% fee preview`,
         ),
         tx(
           "“Top-Rated Only (4.8★+)” Pro filter unlocked in Nearby Finder (/find)",
@@ -226,9 +237,9 @@ function ProSubscriptionExperience() {
           "Abli ang “Top-Rated Only (4.8★+)” Pro filter sa Nearby Finder (/find)",
         ),
         tx(
-          "Saved Searches & Recurring Bookings Pro panel unlocked on Employer Home (/hire)",
-          "Buksan ang Saved Searches & Recurring Bookings Pro panel sa Employer Home (/hire)",
-          "Abli ang Saved Searches & Recurring Bookings Pro panel sa Employer Home (/hire)",
+          "Saved Searches & Employer Pro Crown Badge unlocked on Employer Home (/hire)",
+          "Buksan ang Saved Searches at Pro Crown Badge sa Employer Home (/hire)",
+          "Abli ang Saved Searches ug Pro Crown Badge sa Employer Home (/hire)",
         ),
       ],
     },
@@ -387,7 +398,10 @@ function ProSubscriptionExperience() {
                 )}
               </div>
               <h3 className="mt-3 text-xl font-extrabold">
-                {tx("Free Plan", "Libreng Plan", "Libreng Plan")}
+                {tx("Free Plan", "Libreng Plan", "Libreng Plan")}{" "}
+                <span className="text-sm font-semibold text-muted-foreground">
+                  · {tx("₱0 / forever", "₱0 / walang bayad", "₱0 / walay bayad")}
+                </span>
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {tx(
@@ -445,7 +459,19 @@ function ProSubscriptionExperience() {
                   </span>
                 )}
               </div>
-              <h3 className="mt-3 text-2xl font-extrabold text-foreground">{details.title}</h3>
+              <h3 className="mt-3 text-2xl font-extrabold text-foreground">
+                {details.title}{" "}
+                <span className="text-base font-bold text-foreground/80">
+                  · ₱
+                  {selectedPlan === "worker"
+                    ? TIER_CONFIG.PRO.monthlyPricePhpEmployee
+                    : TIER_CONFIG.PRO.monthlyPricePhpEmployer}
+                  /mo{" "}
+                  <span className="text-xs font-semibold">
+                    ({tx("demo · ₱0 billed", "demo · ₱0 bayad", "demo · ₱0 bayad")})
+                  </span>
+                </span>
+              </h3>
               <p className="mt-1 text-sm text-foreground/80">
                 {selectedPlan === "worker"
                   ? tx(

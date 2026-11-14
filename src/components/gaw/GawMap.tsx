@@ -22,7 +22,13 @@ import {
   nearestBarangay,
   RADIUS_OPTIONS,
 } from "@/lib/gaw/data";
-import { distanceKm, roundKm, type WorkerWithDistance } from "@/lib/gaw/filter";
+import { escapeHtml } from "@/lib/gaw/domain";
+import {
+  distanceKm,
+  roundKm,
+  type JobWithDistance,
+  type WorkerWithDistance,
+} from "@/lib/gaw/filter";
 import { formatAccuracy, useGeolocation, type GeoFix, type LatLng } from "@/lib/gaw/geo";
 import { useI18n } from "@/lib/gaw/i18n";
 import type { PlacedLocation } from "@/lib/gaw/store";
@@ -97,6 +103,9 @@ export interface InteractiveMapProps {
   workers?: WorkerWithDistance[];
   selectedWorkerId?: string | null;
   onSelectWorker?: (worker: WorkerWithDistance) => void;
+  jobs?: JobWithDistance[];
+  selectedJobId?: string | null;
+  onSelectJob?: (job: JobWithDistance) => void;
   recenterKey?: number;
   showLegend?: boolean;
   className?: string;
@@ -118,6 +127,9 @@ export function InteractiveMap({
   workers = [],
   selectedWorkerId,
   onSelectWorker,
+  jobs = [],
+  selectedJobId,
+  onSelectJob,
   recenterKey = 0,
   showLegend = true,
   className,
@@ -129,6 +141,7 @@ export function InteractiveMap({
   const leafletRef = useRef<typeof import("leaflet") | null>(null);
   const onMovePinRef = useRef(onMovePin);
   const onSelectWorkerRef = useRef(onSelectWorker);
+  const onSelectJobRef = useRef(onSelectJob);
   const [ready, setReady] = useState(false);
   const [tileFallback, setTileFallback] = useState(false);
   const { resolved } = useTheme();
@@ -139,6 +152,7 @@ export function InteractiveMap({
 
   onMovePinRef.current = onMovePin;
   onSelectWorkerRef.current = onSelectWorker;
+  onSelectJobRef.current = onSelectJob;
 
   // Mount Leaflet map once on client
   useEffect(() => {
@@ -254,7 +268,7 @@ export function InteractiveMap({
       );
       const gpsIcon = L.divIcon({
         className: "gaw-gps-marker",
-        html: `<div style="width:18px;height:18px;border-radius:9999px;background:#2563EB;border:3px solid #FFFFFF;box-shadow:0 0 0 5px rgba(37,99,235,0.32),0 2px 6px rgba(0,0,0,0.45);" title="${gpsTooltip}"></div>`,
+        html: `<div style="width:18px;height:18px;border-radius:9999px;background:#2563EB;border:3px solid #FFFFFF;box-shadow:0 0 0 5px rgba(37,99,235,0.32),0 2px 6px rgba(0,0,0,0.45);" title="${escapeHtml(gpsTooltip)}"></div>`,
         iconSize: [18, 18],
         iconAnchor: [9, 9],
       });
@@ -275,20 +289,51 @@ export function InteractiveMap({
       const borderCol = isDark ? "#0D1512" : "#FFFFFF";
       const ring = selected ? "0 0 0 4px rgba(244,181,68,0.48)" : "0 2px 8px rgba(0,0,0,0.38)";
       const skillText = translateCategory(w.skill);
+      const safeName = escapeHtml(w.name);
+      const safeSkill = escapeHtml(skillText);
+      const safeInitials = escapeHtml(w.initials);
       const workerIcon = L.divIcon({
         className: "gaw-worker-marker",
-        html: `<button type="button" aria-label="${w.name} (${skillText})" style="display:grid;place-items:center;width:34px;height:34px;border-radius:9999px;background:${bg};color:${fg};font-weight:800;font-size:11px;border:2px solid ${borderCol};box-shadow:${ring};cursor:pointer;">${w.initials}</button>`,
+        html: `<button type="button" aria-label="${safeName} (${safeSkill})" style="display:grid;place-items:center;width:34px;height:34px;border-radius:9999px;background:${bg};color:${fg};font-weight:800;font-size:11px;border:2px solid ${borderCol};box-shadow:${ring};cursor:pointer;">${safeInitials}</button>`,
         iconSize: [34, 34],
         iconAnchor: [17, 17],
       });
 
       const marker = L.marker([w.lat, w.lng], { icon: workerIcon }).addTo(group);
-      marker.bindTooltip(`${w.name} · ${skillText} (≈${w.distance} km)`, {
+      marker.bindTooltip(`${safeName} · ${safeSkill} (≈${w.distance} km)`, {
         direction: "top",
         offset: [0, -16],
       });
       marker.on("click", () => {
         onSelectWorkerRef.current?.(w);
+      });
+    });
+
+    // 3b. Nearby job markers (for Worker Find Jobs map)
+    jobs.forEach((j, idx) => {
+      const selected = j.id === selectedJobId;
+      const bg = selected ? "#F4B544" : j.urgent ? "#D97706" : primaryMarkerGreen;
+      const fg = selected ? "#1B1304" : j.urgent ? "#FFFFFF" : primaryMarkerFg;
+      const borderCol = isDark ? "#0D1512" : "#FFFFFF";
+      const ring = selected ? "0 0 0 4px rgba(244,181,68,0.48)" : "0 2px 8px rgba(0,0,0,0.38)";
+      const safeTitle = escapeHtml(j.title);
+      const safeBudget = escapeHtml(j.budget);
+      const safeCategory = escapeHtml(translateCategory(j.category));
+      const tag = j.urgent ? "!" : `${idx + 1}`;
+      const jobIcon = L.divIcon({
+        className: "gaw-worker-marker",
+        html: `<button type="button" aria-label="${safeTitle} (${safeBudget})" style="display:grid;place-items:center;min-width:34px;height:34px;padding:0 6px;border-radius:9999px;background:${bg};color:${fg};font-weight:800;font-size:11px;border:2px solid ${borderCol};box-shadow:${ring};cursor:pointer;">${tag}</button>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      });
+
+      const marker = L.marker([j.lat, j.lng], { icon: jobIcon }).addTo(group);
+      marker.bindTooltip(`${safeTitle} · ${safeCategory} · ${safeBudget} (≈${j.distance} km)`, {
+        direction: "top",
+        offset: [0, -16],
+      });
+      marker.on("click", () => {
+        onSelectJobRef.current?.(j);
       });
     });
 
@@ -316,14 +361,15 @@ export function InteractiveMap({
         draggable: draggablePin,
       }).addTo(group);
 
+      const safePinLabel = escapeHtml(resolvedPinLabel);
       marker.bindTooltip(
         draggablePin
           ? tx(
-              `${resolvedPinLabel} — drag pin or tap map to move`,
-              `${resolvedPinLabel} — i-drag ang pin o i-tap ang mapa para ilipat`,
-              `${resolvedPinLabel} — i-drag ang pin o i-tap ang mapa aron ibalhin`,
+              `${safePinLabel} — drag pin or tap map to move`,
+              `${safePinLabel} — i-drag ang pin o i-tap ang mapa para ilipat`,
+              `${safePinLabel} — i-drag ang pin o i-tap ang mapa aron ibalhin`,
             )
-          : resolvedPinLabel,
+          : safePinLabel,
         { direction: "top", offset: [0, -30] },
       );
 
@@ -347,6 +393,8 @@ export function InteractiveMap({
     radiusKm,
     workers,
     selectedWorkerId,
+    jobs,
+    selectedJobId,
     isDark,
     tx,
     translateCategory,

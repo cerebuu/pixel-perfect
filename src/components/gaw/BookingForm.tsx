@@ -90,7 +90,11 @@ export function BookingForm({
     const errs = validateBooking(d);
     setErrors(errs);
     if (Object.keys(errs).length === 0) onReview(d);
-    else document.getElementById(Object.keys(errs)[0] ?? "")?.focus();
+    else {
+      const target = document.getElementById(Object.keys(errs)[0] ?? "");
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.focus();
+    }
   };
 
   const aria = (k: keyof BookingDraft) => ({
@@ -265,11 +269,25 @@ export function BookingForm({
             id="budget"
             label={tx("Amount (PHP)", "Halaga (PHP)", "Kantidad (PHP)")}
             error={errors.budget}
+            hint={
+              worker.rate
+                ? tx(
+                    `Worker rate: ₱${worker.rate}/hr · Davao 2–4h fair-pay guide (₱63.50/hr): ~₱${Math.round(Math.max(worker.rate * 2, 127)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, 254)).toLocaleString("en-PH")}`,
+                    `Rate ng manggagawa: ₱${worker.rate}/oras · Gabay sa Davao 2–4h (₱63.50/oras): ~₱${Math.round(Math.max(worker.rate * 2, 127)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, 254)).toLocaleString("en-PH")}`,
+                    `Rate sa trabahante: ₱${worker.rate}/oras · Giya sa Davao 2–4h (₱63.50/oras): ~₱${Math.round(Math.max(worker.rate * 2, 127)).toLocaleString("en-PH")}–₱${Math.round(Math.max(worker.rate * 4, 254)).toLocaleString("en-PH")}`,
+                  )
+                : tx(
+                    "Davao fair-pay guide (₱63.50/hr): at least ₱127 for 2h or ₱254 for 4h",
+                    "Gabay sa Davao (₱63.50/oras): ₱127+ para sa 2 oras o ₱254+ para sa 4 oras",
+                    "Giya sa Davao (₱63.50/oras): ₱127+ sa 2 ka oras o ₱254+ sa 4 ka oras",
+                  )
+            }
           >
             <Input
               id="budget"
               inputMode="numeric"
               placeholder="e.g. 1200"
+              className="scroll-mt-20"
               value={d.budget}
               onChange={(e) => set("budget", e.target.value.replace(/[^\d]/g, ""))}
               {...aria("budget")}

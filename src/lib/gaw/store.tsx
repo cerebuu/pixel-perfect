@@ -7,7 +7,22 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { BARANGAYS, DEMO_PERSONAS, JOBS, nearestBarangay, WORKERS } from "./data";
+import {
+  BARANGAYS,
+  barangayById,
+  buildEnrichedJob,
+  DEMO_PERSONAS,
+  JOBS,
+  nearestBarangay,
+  WORKERS,
+  type Job,
+} from "./data";
+import {
+  FREE_OPEN_GIGS_LIMIT,
+  FREE_WORKER_QUEUE_LIMIT,
+  isWithinDavaoRegion,
+  validateGigPrice,
+} from "./domain";
 import {
   applyAction,
   canWithdraw,
@@ -116,10 +131,14 @@ export interface GawState {
   locationId: string;
   /** Exact hiring location chosen with GPS or a map pin. null = use the barangay centre. */
   serviceLocation: PlacedLocation | null;
+  /** Explicit user-triggered GPS pin (never auto-requested on mount). */
+  userGps: PlacedLocation | null;
   workerProfile: WorkerProfile | null;
   available: boolean;
   bookings: Booking[];
   applications: Application[];
+  savedJobIds: string[];
+  customJobs: Job[];
   plans: ProPlan[];
   verification: Verification;
 }
@@ -133,13 +152,43 @@ export const initialState: GawState = {
   mode: null,
   locationId: "bajada",
   serviceLocation: null,
+  userGps: null,
   workerProfile: null,
   available: true,
   bookings: [],
   applications: [],
+  savedJobIds: [],
+  customJobs: [],
   plans: [],
   verification: { identity: null, credentials: {} },
 };
+
+export interface CreateCustomJobInput {
+  title: string;
+  category: string;
+  barangayId: string;
+  landmark?: string;
+  lat?: number;
+  lng?: number;
+  budgetNum: number | null;
+  estimatedHours: number;
+  schedule: string;
+  description: string;
+  urgent?: boolean;
+}
+
+export interface CreateJobOutcome {
+  ok: boolean;
+  job?: Job;
+  error?: "unverified" | "quota_exceeded" | "outside_davao" | "below_benchmark";
+  message?: string;
+}
+
+export interface SaveJobOutcome {
+  saved: boolean;
+  quotaExceeded?: boolean;
+  limit?: number;
+}
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -301,6 +350,7 @@ export function hasPlan(plans: ProPlan[], p: ProPlan) {
 
 interface GawContext extends GawState {
   hydrated: boolean;
+  allJobs: Job[];
   signUp: (a: Omit<Account, "isDemo">) => void;
   logIn: (email: string) => boolean;
   demoLogin: () => void;
@@ -308,6 +358,7 @@ interface GawContext extends GawState {
   setMode: (m: Mode) => void;
   setLocation: (id: string) => void;
   setServiceLocation: (l: PlacedLocation) => void;
+  setUserGps: (gps: PlacedLocation | null) => void;
   saveWorkerProfile: (p: WorkerProfile) => void;
   setAvailable: (v: boolean) => void;
   addBooking: (b: Omit<Booking, "id" | "status" | "createdAt" | "side" | "client">) => string;
@@ -315,6 +366,9 @@ interface GawContext extends GawState {
   applyToJob: (a: Pick<Application, "jobId" | "message" | "rate">) => boolean;
   withdrawApplication: (id: string) => void;
   simulateHire: (applicationId: string) => string | null;
+  toggleSaveJob: (jobId: string) => SaveJobOutcome;
+  createJob: (input: CreateCustomJobInput) => CreateJobOutcome;
+  removeJob: (jobId: string) => void;
   setPlan: (p: ProPlan, on: boolean) => void;
   submitVerification: (
     target: "identity" | CredentialKey,
@@ -349,29 +403,205 @@ export function clearSessionDrafts() {
   }
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function sanitizePlacedLocation(raw: unknown): PlacedLocation | null {
+  if (!isPlainObject(raw)) return null;
+  const lat = raw["lat"];
+  const lng = raw["lng"];
+  const label = raw["label"];
+  const source = raw["source"];
+  if (
+    typeof lat !== "number" ||
+    !Number.isFinite(lat) ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lng)
+  ) {
+    return null;
+  }
+  const safeSource = source === "gps" || source === "pin" || source === "barangay" ? source : "pin";
+  return {
+    lat,
+    lng,
+    label: typeof label === "string" && label.trim() ? label : nearestBarangay({ lat, lng }).name,
+    source: safeSource,
+  };
+}
+
+function sanitizeAccount(raw: unknown): Account | null {
+  if (!isPlainObject(raw)) return null;
+  const name = raw["name"];
+  const email = raw["email"];
+  const mobile = raw["mobile"];
+  const isDemo = raw["isDemo"];
+  if (typeof name !== "string" || typeof email !== "string") return null;
+  return {
+    name,
+    email,
+    mobile: typeof mobile === "string" ? mobile : "",
+    isDemo: isDemo === true,
+  };
+}
+
+function sanitizeWorkerProfile(raw: unknown): WorkerProfile | null {
+  if (!isPlainObject(raw) || typeof raw["skill"] !== "string") return null;
+  const rawArea = raw["area"];
+  const validArea =
+    isPlainObject(rawArea) &&
+    typeof rawArea["lat"] === "number" &&
+    Number.isFinite(rawArea["lat"]) &&
+    typeof rawArea["lng"] === "number" &&
+    Number.isFinite(rawArea["lng"])
+      ? { lat: rawArea["lat"], lng: rawArea["lng"] }
+      : null;
+  const rawSkills = raw["skills"];
+  const rawBarangayId = raw["barangayId"];
+  const rawRadius = raw["radiusKm"];
+  const rawExperience = raw["experience"];
+  const rawDescription = raw["description"];
+  return {
+    skill: raw["skill"],
+    skills: Array.isArray(rawSkills)
+      ? rawSkills.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      : [],
+    barangayId: typeof rawBarangayId === "string" ? rawBarangayId : "bajada",
+    area: validArea,
+    radiusKm:
+      typeof rawRadius === "number" && Number.isFinite(rawRadius) && rawRadius > 0 ? rawRadius : 3,
+    experience: typeof rawExperience === "string" ? rawExperience : "",
+    description: typeof rawDescription === "string" ? rawDescription : "",
+  };
+}
+
+function sanitizeCustomJob(raw: unknown): Job | null {
+  if (!isPlainObject(raw)) return null;
+  const rawId = raw["id"];
+  const rawTitle = raw["title"];
+  if (typeof rawId !== "string" || !rawId.trim() || typeof rawTitle !== "string") {
+    return null;
+  }
+  const rawBarangayId = raw["barangayId"];
+  const barangayId =
+    typeof rawBarangayId === "string" && barangayById(rawBarangayId)
+      ? rawBarangayId
+      : BARANGAYS[0]!.id;
+  const brgy = barangayById(barangayId) ?? BARANGAYS[0]!;
+  const rawLat = raw["lat"];
+  const rawLng = raw["lng"];
+  const lat = typeof rawLat === "number" && Number.isFinite(rawLat) ? rawLat : brgy.lat;
+  const lng = typeof rawLng === "number" && Number.isFinite(rawLng) ? rawLng : brgy.lng;
+  const rawHours = raw["estimatedHours"];
+  const estimatedHours =
+    typeof rawHours === "number" && Number.isFinite(rawHours) && rawHours > 0 ? rawHours : 4;
+  const rawBudgetNum = raw["budgetNum"];
+  const budgetNum =
+    typeof rawBudgetNum === "number" && Number.isFinite(rawBudgetNum) && rawBudgetNum >= 0
+      ? rawBudgetNum
+      : null;
+  const rawCategory = raw["category"];
+  const category = typeof rawCategory === "string" && rawCategory.trim() ? rawCategory : "Handyman";
+  const rawDescription = raw["description"];
+  const description = typeof rawDescription === "string" ? rawDescription : "";
+  const rawLandmark = raw["landmark"];
+  const rawPoster = raw["poster"];
+  const rawBudget = raw["budget"];
+  const rawPosted = raw["posted"];
+  const rawSchedule = raw["schedule"];
+  const rawCreatedAt = raw["createdAt"];
+
+  return buildEnrichedJob({
+    id: rawId,
+    title: rawTitle,
+    category,
+    barangayId,
+    landmark: typeof rawLandmark === "string" ? rawLandmark : brgy.name,
+    lat,
+    lng,
+    poster: typeof rawPoster === "string" && rawPoster.trim() ? rawPoster : "Davao Employer",
+    budget:
+      typeof rawBudget === "string" && rawBudget.trim()
+        ? rawBudget
+        : budgetNum !== null
+          ? `₱${budgetNum.toLocaleString("en-PH")}`
+          : "Request quote",
+    budgetNum,
+    estimatedHours,
+    posted: typeof rawPosted === "string" && rawPosted.trim() ? rawPosted : "Just now",
+    schedule: typeof rawSchedule === "string" && rawSchedule.trim() ? rawSchedule : "Flexible",
+    description,
+    urgent: raw["urgent"] === true,
+    isCustom: true,
+    createdAt:
+      typeof rawCreatedAt === "number" && Number.isFinite(rawCreatedAt) ? rawCreatedAt : Date.now(),
+  });
+}
+
 export function sanitizeLoadedState(parsed: unknown, fallback: GawState): GawState {
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+  if (!isPlainObject(parsed)) {
     return fallback;
   }
   const obj = parsed as Partial<GawState>;
+  const safeMode: Mode | null = obj.mode === "hire" || obj.mode === "work" ? obj.mode : null;
+
   return {
     ...fallback,
-    ...obj,
-    bookings: Array.isArray(obj.bookings) ? obj.bookings : fallback.bookings,
-    applications: Array.isArray(obj.applications) ? obj.applications : fallback.applications,
-    plans: Array.isArray(obj.plans) ? obj.plans : fallback.plans,
-    verification:
-      obj.verification && typeof obj.verification === "object" && !Array.isArray(obj.verification)
-        ? {
-            identity: obj.verification.identity ?? fallback.verification.identity,
-            credentials:
-              obj.verification.credentials &&
-              typeof obj.verification.credentials === "object" &&
-              !Array.isArray(obj.verification.credentials)
-                ? obj.verification.credentials
-                : fallback.verification.credentials,
-          }
-        : fallback.verification,
+    account: obj.account === null ? null : (sanitizeAccount(obj.account) ?? fallback.account),
+    signedIn: typeof obj.signedIn === "boolean" ? obj.signedIn : fallback.signedIn,
+    mode: safeMode,
+    locationId:
+      typeof obj.locationId === "string" && obj.locationId.trim()
+        ? obj.locationId
+        : fallback.locationId,
+    serviceLocation:
+      obj.serviceLocation === null
+        ? null
+        : (sanitizePlacedLocation(obj.serviceLocation) ?? fallback.serviceLocation),
+    userGps:
+      obj.userGps === null ? null : (sanitizePlacedLocation(obj.userGps) ?? fallback.userGps),
+    workerProfile:
+      obj.workerProfile === null
+        ? null
+        : (sanitizeWorkerProfile(obj.workerProfile) ?? fallback.workerProfile),
+    available: typeof obj.available === "boolean" ? obj.available : fallback.available,
+    bookings: Array.isArray(obj.bookings)
+      ? obj.bookings.filter((b): b is Booking => isPlainObject(b) && typeof b.id === "string")
+      : fallback.bookings,
+    applications: Array.isArray(obj.applications)
+      ? obj.applications.filter(
+          (a): a is Application =>
+            isPlainObject(a) && typeof a.id === "string" && typeof a.jobId === "string",
+        )
+      : fallback.applications,
+    savedJobIds: Array.isArray(obj.savedJobIds)
+      ? Array.from(
+          new Set(
+            obj.savedJobIds.filter(
+              (id): id is string => typeof id === "string" && id.trim().length > 0,
+            ),
+          ),
+        )
+      : fallback.savedJobIds,
+    customJobs: Array.isArray(obj.customJobs)
+      ? obj.customJobs.map(sanitizeCustomJob).filter((j): j is Job => j !== null)
+      : fallback.customJobs,
+    plans: Array.isArray(obj.plans)
+      ? Array.from(
+          new Set(obj.plans.filter((p): p is ProPlan => p === "worker" || p === "employer")),
+        )
+      : fallback.plans,
+    verification: isPlainObject(obj.verification)
+      ? {
+          identity:
+            obj.verification.identity && isPlainObject(obj.verification.identity)
+              ? (obj.verification.identity as VerifDoc)
+              : fallback.verification.identity,
+          credentials: isPlainObject(obj.verification.credentials)
+            ? (obj.verification.credentials as Verification["credentials"])
+            : fallback.verification.credentials,
+        }
+      : fallback.verification,
   };
 }
 
@@ -398,10 +628,13 @@ export function GawProvider({ children }: { children: ReactNode }) {
 
   const patch = useCallback((fn: (s: GawState) => GawState) => setState(fn), []);
 
+  const allJobs = useMemo(() => [...state.customJobs, ...JOBS], [state.customJobs]);
+
   const value = useMemo<GawContext>(
     () => ({
       ...state,
       hydrated,
+      allJobs,
       signUp: (a) => {
         clearSessionDrafts();
         patch(() => freshAccountState({ ...a, isDemo: false }));
@@ -433,6 +666,7 @@ export function GawProvider({ children }: { children: ReactNode }) {
       setLocation: (locationId) => patch((s) => ({ ...s, locationId, serviceLocation: null })),
       setServiceLocation: (l) =>
         patch((s) => ({ ...s, serviceLocation: l, locationId: nearestBarangay(l).id })),
+      setUserGps: (userGps) => patch((s) => ({ ...s, userGps })),
       saveWorkerProfile: (workerProfile) => patch((s) => ({ ...s, workerProfile })),
       setAvailable: (available) => patch((s) => ({ ...s, available })),
       addBooking: (b) => {
@@ -480,7 +714,7 @@ export function GawProvider({ children }: { children: ReactNode }) {
         })),
       simulateHire: (applicationId) => {
         const app = state.applications.find((x) => x.id === applicationId);
-        const job = app && JOBS.find((j) => j.id === app.jobId);
+        const job = app && allJobs.find((j) => j.id === app.jobId);
         if (!app || !job || app.status !== "submitted") return null;
         const id = uid("r");
         patch((s) => ({
@@ -511,6 +745,24 @@ export function GawProvider({ children }: { children: ReactNode }) {
         }));
         return id;
       },
+      toggleSaveJob: (jobId) => {
+        const res = applyToggleSaveJob(state, jobId);
+        if (!res.result.quotaExceeded) {
+          patch((s) => applyToggleSaveJob(s, jobId).nextState);
+        }
+        return res.result;
+      },
+      createJob: (input) => {
+        const res = applyCreateJob(state, input);
+        if (res.result.ok) {
+          patch((s) => {
+            const next = applyCreateJob(s, input);
+            return next.result.ok ? next.nextState : s;
+          });
+        }
+        return res.result;
+      },
+      removeJob: (jobId) => patch((s) => applyRemoveJob(s, jobId)),
       setPlan: (p, on) =>
         patch((s) => ({
           ...s,
@@ -570,7 +822,7 @@ export function GawProvider({ children }: { children: ReactNode }) {
         setState(initialState);
       },
     }),
-    [state, hydrated, patch],
+    [state, hydrated, allJobs, patch],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
@@ -590,10 +842,119 @@ export function workerById(id: string) {
   return WORKERS.find((w) => w.id === id);
 }
 
+export function jobById(id: string, customJobs: Job[] = []) {
+  return customJobs.find((j) => j.id === id) ?? JOBS.find((j) => j.id === id);
+}
+
 export function identityVerified(v: Verification) {
   return evaluateVerificationGuard(v.identity).allowed;
 }
 
 export function canPerformProtectedAction(v: Verification) {
   return evaluateVerificationGuard(v.identity);
+}
+
+/** Pure state transition helper for saving/unsaving a job with Free vs Worker Pro queue limits. */
+export function applyToggleSaveJob(
+  s: GawState,
+  jobId: string,
+): { nextState: GawState; result: ReturnType<GawContext["toggleSaveJob"]> } {
+  const currentlySaved = s.savedJobIds.includes(jobId);
+  if (currentlySaved) {
+    return {
+      nextState: { ...s, savedJobIds: s.savedJobIds.filter((id) => id !== jobId) },
+      result: { saved: false },
+    };
+  }
+  const isWorkerPro = hasPlan(s.plans, "worker");
+  if (!isWorkerPro && s.savedJobIds.length >= FREE_WORKER_QUEUE_LIMIT) {
+    return {
+      nextState: s,
+      result: { saved: false, quotaExceeded: true, limit: FREE_WORKER_QUEUE_LIMIT },
+    };
+  }
+  return {
+    nextState: { ...s, savedJobIds: [jobId, ...s.savedJobIds] },
+    result: { saved: true },
+  };
+}
+
+/** Pure state transition helper for posting a custom service request with all marketplace invariants. */
+export function applyCreateJob(
+  s: GawState,
+  input: Parameters<GawContext["createJob"]>[0],
+): { nextState: GawState; result: ReturnType<GawContext["createJob"]> } {
+  if (!identityVerified(s.verification)) {
+    return { nextState: s, result: { ok: false, error: "unverified" } };
+  }
+  const isEmployerPro = hasPlan(s.plans, "employer");
+  if (!isEmployerPro && s.customJobs.length >= FREE_OPEN_GIGS_LIMIT) {
+    return {
+      nextState: s,
+      result: {
+        ok: false,
+        error: "quota_exceeded",
+        message: `Free tier allows up to ${FREE_OPEN_GIGS_LIMIT} active open requests.`,
+      },
+    };
+  }
+  const brgy = barangayById(input.barangayId) ?? BARANGAYS[0]!;
+  const lat = input.lat ?? brgy.lat;
+  const lng = input.lng ?? brgy.lng;
+  if (!isWithinDavaoRegion(lat, lng)) {
+    return {
+      nextState: s,
+      result: {
+        ok: false,
+        error: "outside_davao",
+        message: "Selected location falls outside the Davao City service area.",
+      },
+    };
+  }
+  if (input.budgetNum !== null) {
+    const check = validateGigPrice(input.estimatedHours, input.budgetNum);
+    if (!check.isValid) {
+      return {
+        nextState: s,
+        result: {
+          ok: false,
+          error: "below_benchmark",
+          message: `Budget ₱${input.budgetNum.toLocaleString("en-PH")} is below GAW's ₱${check.minimumRequiredPhp.toLocaleString("en-PH")} fair-pay benchmark for ${input.estimatedHours}h.`,
+        },
+      };
+    }
+  }
+  const job = buildEnrichedJob({
+    id: uid("j-custom"),
+    title: input.title.trim(),
+    category: input.category,
+    barangayId: brgy.id,
+    landmark: input.landmark?.trim() || brgy.name,
+    lat,
+    lng,
+    poster: s.account?.name || "You",
+    budget:
+      input.budgetNum !== null ? `₱${input.budgetNum.toLocaleString("en-PH")}` : "Request quote",
+    budgetNum: input.budgetNum,
+    estimatedHours: input.estimatedHours,
+    posted: "Just now",
+    schedule: input.schedule.trim() || "Flexible",
+    description: input.description.trim(),
+    urgent: input.urgent === true,
+    isCustom: true,
+    createdAt: Date.now(),
+  });
+  return {
+    nextState: { ...s, customJobs: [job, ...s.customJobs] },
+    result: { ok: true, job },
+  };
+}
+
+/** Pure state transition helper for removing a custom request and cascading savedQueue cleanup. */
+export function applyRemoveJob(s: GawState, jobId: string): GawState {
+  return {
+    ...s,
+    customJobs: s.customJobs.filter((j) => j.id !== jobId),
+    savedJobIds: s.savedJobIds.filter((id) => id !== jobId),
+  };
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  Bookmark,
   Briefcase,
   CalendarDays,
   CheckCircle2,
@@ -10,6 +11,7 @@ import {
   Play,
   Sparkles,
   Tag,
+  Trash2,
   UserCheck,
   Wallet,
   XCircle,
@@ -36,9 +38,10 @@ import {
   type BookingAction,
   type MyJobsTab,
 } from "@/lib/gaw/bookings";
-import { barangayName, DEMO_PERSONAS, JOBS, WORKERS } from "@/lib/gaw/data";
+import { barangayName, DEMO_PERSONAS, WORKERS } from "@/lib/gaw/data";
+import { FREE_WORKER_QUEUE_LIMIT } from "@/lib/gaw/domain";
 import { useI18n } from "@/lib/gaw/i18n";
-import { formatPeso, useGaw, type Booking } from "@/lib/gaw/store";
+import { formatPeso, hasPlan, useGaw, type Booking } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
 type MyJobsSearch = { tab?: MyJobsTab | undefined };
@@ -121,6 +124,10 @@ function MyJobsManager() {
     account,
     bookings,
     applications,
+    allJobs,
+    savedJobIds,
+    toggleSaveJob,
+    plans,
     bookingAction,
     withdrawApplication,
     simulateHire,
@@ -132,9 +139,12 @@ function MyJobsManager() {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   const selectedBooking = bookings.find((b) => b.id === selectedBookingId) ?? null;
+  const savedJobs = allJobs.filter((j) => savedJobIds.includes(j.id));
+  const isWorkerPro = hasPlan(plans, "worker");
 
   const counts: Record<MyJobsTab, number> = {
     applications: applications.length,
+    saved: savedJobs.length,
     pending: bookings.filter((b) => tabForStatus(b.status) === "pending").length,
     upcoming: bookings.filter((b) => tabForStatus(b.status) === "upcoming").length,
     in_progress: bookings.filter((b) => tabForStatus(b.status) === "in_progress").length,
@@ -143,7 +153,7 @@ function MyJobsManager() {
   };
 
   const tabBookings =
-    activeTab === "applications"
+    activeTab === "applications" || activeTab === "saved"
       ? []
       : bookings.filter((b) => tabForStatus(b.status) === activeTab);
 
@@ -235,7 +245,7 @@ function MyJobsManager() {
         )}
       </div>
 
-      {/* 6 My Jobs Tabs */}
+      {/* 7 My Jobs Tabs (ARIA tablist with Left/Right/Home/End keyboard navigation) */}
       <div
         role="tablist"
         aria-label={tx(
@@ -245,15 +255,32 @@ function MyJobsManager() {
         )}
         className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1.5"
       >
-        {MY_JOBS_TABS.map((tab) => {
+        {MY_JOBS_TABS.map((tab, index) => {
           const active = activeTab === tab.key;
           return (
             <button
               key={tab.key}
+              id={`myjobs-tab-${tab.key}`}
               type="button"
               role="tab"
               aria-selected={active}
+              aria-controls="myjobs-tabpanel"
+              tabIndex={active ? 0 : -1}
               onClick={() => setActiveTab(tab.key)}
+              onKeyDown={(e) => {
+                let targetIdx: number | null = null;
+                if (e.key === "ArrowRight") targetIdx = (index + 1) % MY_JOBS_TABS.length;
+                else if (e.key === "ArrowLeft") {
+                  targetIdx = (index - 1 + MY_JOBS_TABS.length) % MY_JOBS_TABS.length;
+                } else if (e.key === "Home") targetIdx = 0;
+                else if (e.key === "End") targetIdx = MY_JOBS_TABS.length - 1;
+                if (targetIdx !== null) {
+                  e.preventDefault();
+                  const nextKey = MY_JOBS_TABS[targetIdx]!.key;
+                  setActiveTab(nextKey);
+                  document.getElementById(`myjobs-tab-${nextKey}`)?.focus();
+                }
+              }}
               className={filterTabPillClass(
                 active,
                 "inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-sm font-semibold",
@@ -277,7 +304,12 @@ function MyJobsManager() {
 
       {/* Tab 1: Applications */}
       {activeTab === "applications" && (
-        <section aria-label={t("myJobs.tabApplications")} className="space-y-3">
+        <section
+          id="myjobs-tabpanel"
+          role="tabpanel"
+          aria-labelledby="myjobs-tab-applications"
+          className="space-y-3"
+        >
           {applications.length === 0 ? (
             <EmptyState
               icon={<ClipboardList className="size-6" />}
@@ -301,7 +333,7 @@ function MyJobsManager() {
             />
           ) : (
             applications.map((app) => {
-              const job = JOBS.find((j) => j.id === app.jobId);
+              const job = allJobs.find((j) => j.id === app.jobId);
               const badge = APP_STATUS_BADGE[app.status];
               return (
                 <article
@@ -435,9 +467,133 @@ function MyJobsManager() {
         </section>
       )}
 
-      {/* Tabs 2-6: Booking State Machine Tabs */}
-      {activeTab !== "applications" && (
-        <section aria-label={activeTab} className="space-y-3">
+      {/* Tab 2: Saved / Desired Jobs */}
+      {activeTab === "saved" && (
+        <section
+          id="myjobs-tabpanel"
+          role="tabpanel"
+          aria-labelledby="myjobs-tab-saved"
+          className="space-y-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-card px-4 py-3 text-xs shadow-soft">
+            <span className="font-semibold text-foreground">
+              {isWorkerPro
+                ? tx(
+                    `${savedJobs.length} saved jobs · Unlimited queue (Worker Pro)`,
+                    `${savedJobs.length} naka-save · Walang limit (Worker Pro)`,
+                    `${savedJobs.length} gi-save · Walay limit (Worker Pro)`,
+                  )
+                : tx(
+                    `${savedJobs.length} of ${FREE_WORKER_QUEUE_LIMIT} saved queue slots used (Free)`,
+                    `${savedJobs.length} sa ${FREE_WORKER_QUEUE_LIMIT} naka-save na trabaho ang gamit (Free)`,
+                    `${savedJobs.length} sa ${FREE_WORKER_QUEUE_LIMIT} ka gi-save nga trabaho ang nagamit (Free)`,
+                  )}
+            </span>
+            {!isWorkerPro && (
+              <Link to="/pro" className={subtleLinkClass}>
+                {tx("Unlock unlimited →", "I-unlock ang unlimited →", "I-unlock ang unlimited →")}
+              </Link>
+            )}
+          </div>
+
+          {savedJobs.length === 0 ? (
+            <EmptyState
+              icon={<Bookmark className="size-6" />}
+              title={tx(
+                "No saved jobs yet",
+                "Wala pang naka-save na trabaho",
+                "Wala pay gi-save nga trabaho",
+              )}
+              body={tx(
+                "Tap the bookmark icon on any listing in Find Jobs to shortlist gigs you want to apply for.",
+                "Pindutin ang bookmark sa alinmang trabaho sa Maghanap ng Trabaho para i-save ito rito.",
+                "Pindota ang bookmark sa bisan unsang trabaho sa Pangita og Trabaho aron ma-save dinhi.",
+              )}
+              action={
+                <Button asChild>
+                  <Link to="/jobs">
+                    {tx("Browse Open Jobs", "Maghanap ng Trabaho", "Pangita og Trabaho")}
+                  </Link>
+                </Button>
+              }
+            />
+          ) : (
+            savedJobs.map((job) => {
+              const hasApplied = applications.some(
+                (a) => a.jobId === job.id && a.status !== "withdrawn",
+              );
+              return (
+                <article
+                  key={job.id}
+                  className="animate-fade-up rounded-2xl border bg-card p-4 shadow-soft md:p-5"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold text-secondary-foreground">
+                          {translateCategory(job.category)}
+                        </span>
+                        {hasApplied && (
+                          <span className="rounded-full bg-status-confirmed-bg px-2.5 py-0.5 text-xs font-semibold text-status-confirmed">
+                            {tx("Applied", "Nag-apply na", "Naka-apply na")}
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-lg font-bold">{job.title}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {job.poster} · {barangayName(job.barangayId)}
+                        {job.landmark ? ` (${job.landmark})` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-base font-extrabold text-primary">{job.budget}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {job.schedule} · {job.estimatedHours}h
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t pt-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        toggleSaveJob(job.id);
+                        toast(
+                          tx(
+                            `Removed “${job.title}” from saved jobs`,
+                            `Inalis ang “${job.title}” sa naka-save`,
+                            `Gikuha ang “${job.title}” sa gi-save`,
+                          ),
+                        );
+                      }}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden />
+                      {tx("Remove", "Alisin", "Kuhaa")}
+                    </Button>
+                    <Button asChild size="sm">
+                      <Link to="/jobs/$id" params={{ id: job.id }}>
+                        {hasApplied
+                          ? tx("View Details", "Tingnan ang Detalye", "Tan-awa ang Detalye")
+                          : tx("View & Apply", "Tingnan at Mag-apply", "Tan-awa ug Mo-apply")}
+                      </Link>
+                    </Button>
+                  </div>
+                </article>
+              );
+            })
+          )}
+        </section>
+      )}
+
+      {/* Tabs 3-7: Booking State Machine Tabs */}
+      {activeTab !== "applications" && activeTab !== "saved" && (
+        <section
+          id="myjobs-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`myjobs-tab-${activeTab}`}
+          className="space-y-3"
+        >
           {tabBookings.length === 0 ? (
             <EmptyState
               icon={<Briefcase className="size-6" />}
@@ -469,7 +625,7 @@ function MyJobsManager() {
                 translateCategory,
               );
               const rawCategory = b.jobId
-                ? (JOBS.find((j) => j.id === b.jobId)?.category ?? b.service)
+                ? (allJobs.find((j) => j.id === b.jobId)?.category ?? b.service)
                 : (workerProfile?.skill ?? b.service);
               const jobCategory = translateCategory(rawCategory);
               const rateDisplay =

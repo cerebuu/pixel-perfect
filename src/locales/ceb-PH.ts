@@ -286,6 +286,7 @@ export const cebPH: TranslationDictionary = {
     tabPending: "Naka-pending",
     tabActive: "Aktibo",
     tabApplications: "Aplikasyon",
+    tabSaved: "Gi-save",
     tabCompleted: "Nahuman",
     tabCancelled: "Gikansela",
     tabHistory: "Kasaysayan",

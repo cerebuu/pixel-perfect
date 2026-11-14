@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Briefcase, Clock, MapPin, Star, Zap } from "lucide-react";
-import { interactiveEntityCardClass } from "./interactions";
+import { Bookmark, Briefcase, Clock, MapPin, Navigation, Scale, Star, Zap } from "lucide-react";
+import { interactiveEntityCardClass, iconActionButtonClass } from "./interactions";
 import { Avatar, AvailabilityBadge, PriceDisplay, SkillChip } from "./primitives";
 import { Button } from "@/components/ui/button";
 import { barangayName, type Job } from "@/lib/gaw/data";
+import { estimateTravelMinutes, formatDistanceBadge } from "@/lib/gaw/domain";
 import type { WorkerWithDistance } from "@/lib/gaw/filter";
 import { useI18n } from "@/lib/gaw/i18n";
 import { formatPeso } from "@/lib/gaw/store";
@@ -86,8 +87,19 @@ export function WorkerCard({ worker }: { worker: WorkerWithDistance }) {
   );
 }
 
-export function JobCard({ job, applied }: { job: Job; applied?: boolean }) {
+export interface JobCardProps {
+  job: Job & { distance?: number };
+  applied?: boolean;
+  saved?: boolean;
+  onToggleSave?: () => void;
+  onFocusMap?: () => void;
+}
+
+export function JobCard({ job, applied, saved, onToggleSave, onFocusMap }: JobCardProps) {
   const { tx, translateCategory } = useI18n();
+  const eta = job.distance !== undefined ? estimateTravelMinutes(job.distance) : null;
+  const benchmarkMet = job.budgetNum === null || job.budgetNum >= job.minimumRequiredPhp;
+
   return (
     <article className={interactiveEntityCardClass}>
       <div className="flex items-start justify-between gap-3">
@@ -101,27 +113,90 @@ export function JobCard({ job, applied }: { job: Job; applied?: boolean }) {
                 <Zap className="size-3" aria-hidden /> {tx("Urgent", "Apurahan", "Dinalian")}
               </span>
             )}
+            {benchmarkMet && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-status-confirmed-bg px-2 py-0.5 text-[11px] font-semibold text-status-confirmed"
+                title={tx(
+                  `Benchmark floor: ${formatPeso(job.minimumRequiredPhp)} (${job.estimatedHours}h est.)`,
+                  `Gabay na sahod: ${formatPeso(job.minimumRequiredPhp)} (${job.estimatedHours} oras)`,
+                  `Base nga giya: ${formatPeso(job.minimumRequiredPhp)} (${job.estimatedHours} oras)`,
+                )}
+              >
+                <Scale className="size-3" aria-hidden />
+                {job.budgetNum === null
+                  ? tx("Quote", "Presyohan", "Presyo")
+                  : tx("Benchmark ≥", "Pasok sa gabay", "Pasok sa giya")}
+              </span>
+            )}
           </div>
           <h3 className="text-base font-extrabold leading-snug tracking-tight text-foreground transition-colors duration-150 group-hover:text-primary">
             {job.title}
           </h3>
           <p className="mt-0.5 text-sm text-muted-foreground">{job.poster}</p>
         </div>
-        <p className="shrink-0 text-right text-sm font-extrabold text-foreground">{job.budget}</p>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <p className="text-right text-sm font-extrabold text-foreground">{job.budget}</p>
+          {onToggleSave && (
+            <button
+              type="button"
+              onClick={onToggleSave}
+              aria-pressed={!!saved}
+              aria-label={
+                saved
+                  ? tx(
+                      `Remove ${job.title} from saved jobs`,
+                      `Alisin sa naka-save: ${job.title}`,
+                      `Kuhaa sa gi-save: ${job.title}`,
+                    )
+                  : tx(
+                      `Save job ${job.title}`,
+                      `I-save ang trabaho: ${job.title}`,
+                      `I-save ang trabaho: ${job.title}`,
+                    )
+              }
+              title={
+                saved ? tx("Saved", "Naka-save", "Gi-save") : tx("Save job", "I-save", "I-save")
+              }
+              className={iconActionButtonClass(
+                "default",
+                cn(
+                  "relative z-10 size-9 rounded-full border",
+                  saved
+                    ? "border-primary/40 bg-secondary text-primary"
+                    : "border-border bg-card text-muted-foreground",
+                ),
+              )}
+            >
+              <Bookmark className={cn("size-4", saved && "fill-current")} aria-hidden />
+            </button>
+          )}
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">
           <MapPin className="size-3.5 text-primary/85" aria-hidden /> {barangayName(job.barangayId)}
+          {job.landmark ? ` · ${job.landmark}` : ""}
         </span>
+        {job.distance !== undefined && (
+          <span className="inline-flex items-center gap-1 font-semibold text-foreground/85">
+            <Navigation className="size-3 text-primary" aria-hidden />
+            {formatDistanceBadge(job.distance)}
+            {eta &&
+              ` · ~${eta.minutes}m ${
+                eta.mode === "walk" ? tx("walk", "lakad", "lakaw") : tx("ride", "byahe", "sakay")
+              }`}
+          </span>
+        )}
         <span className="inline-flex items-center gap-1">
-          <Clock className="size-3.5 text-primary/85" aria-hidden /> {job.schedule}
+          <Clock className="size-3.5 text-primary/85" aria-hidden /> {job.schedule} (
+          {job.estimatedHours}h)
         </span>
         <span className="inline-flex items-center gap-1">
           <Briefcase className="size-3.5 text-primary/85" aria-hidden />{" "}
           {tx("Posted", "Na-post", "Gi-post")} {job.posted}
         </span>
       </div>
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/80 pt-3.5">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/80 pt-3.5">
         {applied ? (
           <span className="text-sm font-semibold text-primary">
             ✓ {tx("Application submitted", "Naipasa ang aplikasyon", "Na-submit ang aplikasyon")}
@@ -131,25 +206,39 @@ export function JobCard({ job, applied }: { job: Job; applied?: boolean }) {
             {tx("Open for applications", "Bukas sa aplikasyon", "Abli sa aplikasyon")}
           </span>
         )}
-        <Button
-          asChild
-          size="sm"
-          variant={applied ? "outline" : "default"}
-          className={
-            applied
-              ? "group-hover:border-hover-border group-hover:bg-hover-surface group-hover:text-foreground"
-              : "group-hover:brightness-[1.06] group-hover:shadow-soft"
-          }
-        >
-          <Link
-            to="/jobs/$id"
-            params={{ id: job.id }}
-            aria-label={`View job: ${job.title}`}
-            className="after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+        <div className="flex items-center gap-2">
+          {onFocusMap && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onFocusMap}
+              className="relative z-10"
+            >
+              <MapPin className="size-3.5" aria-hidden />
+              {tx("On map", "Sa mapa", "Sa mapa")}
+            </Button>
+          )}
+          <Button
+            asChild
+            size="sm"
+            variant={applied ? "outline" : "default"}
+            className={
+              applied
+                ? "group-hover:border-hover-border group-hover:bg-hover-surface group-hover:text-foreground"
+                : "group-hover:brightness-[1.06] group-hover:shadow-soft"
+            }
           >
-            {tx("View Job", "Tingnan ang Trabaho", "Tan-awa ang Trabaho")}
-          </Link>
-        </Button>
+            <Link
+              to="/jobs/$id"
+              params={{ id: job.id }}
+              aria-label={`View job: ${job.title}`}
+              className="after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+            >
+              {tx("View Job", "Tingnan ang Trabaho", "Tan-awa ang Trabaho")}
+            </Link>
+          </Button>
+        </div>
       </div>
     </article>
   );

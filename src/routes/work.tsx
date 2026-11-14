@@ -22,9 +22,11 @@ import { ProfileSetup } from "@/components/gaw/ProfileSetup";
 import { Avatar, EmptyState, SectionHeader, StatusBadge } from "@/components/gaw/primitives";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { barangayName, JOBS } from "@/lib/gaw/data";
+import { barangayById, barangayName, BARANGAYS } from "@/lib/gaw/data";
+import { distanceKm, roundKm } from "@/lib/gaw/filter";
+import { FREE_WORKER_QUEUE_LIMIT } from "@/lib/gaw/domain";
 import { useI18n } from "@/lib/gaw/i18n";
-import { identityVerified, useGaw } from "@/lib/gaw/store";
+import { hasPlan, identityVerified, useGaw } from "@/lib/gaw/store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/work")({
@@ -73,6 +75,9 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
     setAvailable,
     bookings,
     applications,
+    allJobs,
+    savedJobIds,
+    toggleSaveJob,
     plans,
     verification,
   } = useGaw();
@@ -90,12 +95,18 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
   const pending = bookings.filter((r) => r.status === "pending");
   const upcoming = bookings.filter((r) => r.status === "confirmed" || r.status === "in_progress");
   const applied = new Set(applications.map((a) => a.jobId));
+  const savedSet = new Set(savedJobIds);
+  const brgy = barangayById(p.barangayId) ?? BARANGAYS[0]!;
+  const workerOrigin = p.area ?? { lat: brgy.lat, lng: brgy.lng };
 
-  const nearbyJobs = [...JOBS]
+  const nearbyJobs = [...allJobs]
+    .map((j) => ({
+      ...j,
+      distance: roundKm(distanceKm(workerOrigin, j)),
+    }))
     .sort(
       (a, b) =>
-        Number(b.category === p.skill) - Number(a.category === p.skill) ||
-        Number(b.barangayId === p.barangayId) - Number(a.barangayId === p.barangayId),
+        Number(b.category === p.skill) - Number(a.category === p.skill) || a.distance - b.distance,
     )
     .slice(0, 3);
 
@@ -262,7 +273,24 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             />
             <div className="space-y-3">
               {nearbyJobs.map((j) => (
-                <JobCard key={j.id} job={j} applied={applied.has(j.id)} />
+                <JobCard
+                  key={j.id}
+                  job={j}
+                  applied={applied.has(j.id)}
+                  saved={savedSet.has(j.id)}
+                  onToggleSave={() => {
+                    const res = toggleSaveJob(j.id);
+                    if (res.quotaExceeded) {
+                      toast.error(
+                        tx(
+                          `Free tier allows up to ${res.limit ?? FREE_WORKER_QUEUE_LIMIT} saved jobs.`,
+                          `Hanggang ${res.limit ?? FREE_WORKER_QUEUE_LIMIT} trabaho lang sa Free tier.`,
+                          `Hangtod ${res.limit ?? FREE_WORKER_QUEUE_LIMIT} ka trabaho lang sa Free tier.`,
+                        ),
+                      );
+                    }
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -343,16 +371,27 @@ function WorkerDashboard({ onEditProfile }: { onEditProfile: () => void }) {
             />
             <p className="text-sm text-muted-foreground">
               {tx(
-                `${upcoming.length} active/upcoming · ${applications.length} application${applications.length === 1 ? "" : "s"} sent`,
-                `${upcoming.length} aktibo/darating · ${applications.length} aplikasyong naipasa`,
-                `${upcoming.length} aktibo/umaabot · ${applications.length} aplikasyon napadala`,
+                `${upcoming.length} active/upcoming · ${applications.length} application${applications.length === 1 ? "" : "s"} · ${savedJobIds.length} saved`,
+                `${upcoming.length} aktibo/darating · ${applications.length} aplikasyon · ${savedJobIds.length} naka-save`,
+                `${upcoming.length} aktibo/umaabot · ${applications.length} aplikasyon · ${savedJobIds.length} gi-save`,
               )}
             </p>
-            <Button asChild size="sm" variant="soft" className="mt-3 w-full">
-              <Link to="/my-jobs">
-                {tx("Open Job Management", "Pamahalaan ang Trabaho", "Ablihi ang Akong Trabaho")}
-              </Link>
-            </Button>
+            <div className="mt-3 flex gap-2">
+              <Button asChild size="sm" variant="soft" className="flex-1">
+                <Link to="/my-jobs">
+                  {tx("Open Job Management", "Pamahalaan ang Trabaho", "Ablihi ang Akong Trabaho")}
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/my-jobs" search={{ tab: "saved" }}>
+                  {tx(
+                    `Saved (${savedJobIds.length}${hasPlan(plans, "worker") ? "" : `/${FREE_WORKER_QUEUE_LIMIT}`})`,
+                    `Naka-save (${savedJobIds.length}${hasPlan(plans, "worker") ? "" : `/${FREE_WORKER_QUEUE_LIMIT}`})`,
+                    `Gi-save (${savedJobIds.length}${hasPlan(plans, "worker") ? "" : `/${FREE_WORKER_QUEUE_LIMIT}`})`,
+                  )}
+                </Link>
+              </Button>
+            </div>
           </section>
 
           {plans.includes("worker") ? (

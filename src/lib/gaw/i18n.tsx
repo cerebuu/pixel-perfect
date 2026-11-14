@@ -194,6 +194,7 @@ export function getVerifNextText(status: VerifStatus, locale: Locale = "en-PH"):
 export function getMyJobsTabLabel(tab: MyJobsTab, locale: Locale = "en-PH"): string {
   const map: Record<MyJobsTab, [string, string, string]> = {
     applications: ["Applications", "Aplikasyon", "Aplikasyon"],
+    saved: ["Saved", "Naka-save", "Gi-save"],
     pending: ["Pending Requests", "Naka-pending", "Naka-pending"],
     upcoming: ["Upcoming", "Darating", "Umaabot"],
     in_progress: ["In Progress", "Ginagawa", "Ginahimo"],
@@ -234,7 +235,9 @@ function readInitialLocale(): Locale {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readInitialLocale);
+  // Start with DEFAULT_LOCALE so SSR and initial client hydration never diverge;
+  // stored preference applies immediately in useEffect after hydration.
+  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
 
   useEffect(() => {
     const stored = readInitialLocale();

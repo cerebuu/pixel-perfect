@@ -35,13 +35,20 @@ export function nextStatus(status: BookingStatus, action: BookingAction): Bookin
   return t.from.includes(status) ? t.to : null;
 }
 
-export function allowedActions(status: BookingStatus, role?: "worker" | "employer"): BookingAction[] {
+export function allowedActions(
+  status: BookingStatus,
+  role?: "worker" | "employer",
+): BookingAction[] {
   return (Object.keys(TRANSITIONS) as BookingAction[]).filter(
     (a) => nextStatus(status, a) && (!role || ACTION_ROLE[a] === role),
   );
 }
 
-export function applyAction<T extends { id: string; status: BookingStatus }>(items: T[], id: string, action: BookingAction): T[] {
+export function applyAction<T extends { id: string; status: BookingStatus }>(
+  items: T[],
+  id: string,
+  action: BookingAction,
+): T[] {
   return items.map((it) => {
     if (it.id !== id) return it;
     const to = nextStatus(it.status, action);
@@ -59,10 +66,12 @@ export const STATUS_LABEL: Record<BookingStatus, string> = {
   cancelled: "Cancelled",
 };
 
-export type MyJobsTab = "applications" | "pending" | "upcoming" | "in_progress" | "completed" | "cancelled";
+export type MyJobsTab =
+  "applications" | "saved" | "pending" | "upcoming" | "in_progress" | "completed" | "cancelled";
 
 export const MY_JOBS_TABS: { key: MyJobsTab; label: string }[] = [
   { key: "applications", label: "Applications" },
+  { key: "saved", label: "Saved" },
   { key: "pending", label: "Pending Requests" },
   { key: "upcoming", label: "Upcoming" },
   { key: "in_progress", label: "In Progress" },
@@ -71,7 +80,7 @@ export const MY_JOBS_TABS: { key: MyJobsTab; label: string }[] = [
 ];
 
 /** Which My Jobs tab a booking belongs to. */
-export function tabForStatus(s: BookingStatus): Exclude<MyJobsTab, "applications"> {
+export function tabForStatus(s: BookingStatus): Exclude<MyJobsTab, "applications" | "saved"> {
   switch (s) {
     case "pending":
       return "pending";

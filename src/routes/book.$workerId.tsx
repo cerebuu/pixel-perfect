@@ -3,6 +3,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, CheckCircle2, Loader2, Pencil, RotateCcw } from "lucide-react";
 import { AppLayout } from "@/components/gaw/AppLayout";
 import { BookingForm, formatTime, type BookingDraft } from "@/components/gaw/BookingForm";
+import { SettlementPreviewCard } from "@/components/gaw/PricingGuide";
 import { Avatar, StatusBadge } from "@/components/gaw/primitives";
 import { VerificationGuardModal } from "@/components/gaw/VerificationCenter";
 import { Button } from "@/components/ui/button";
@@ -54,7 +55,7 @@ function BookPage() {
 }
 
 function BookingFlow({ worker }: { worker: Worker }) {
-  const { account, locationId, serviceLocation, addBooking, verification } = useGaw();
+  const { account, locationId, serviceLocation, addBooking, verification, plans } = useGaw();
   const { locale, tx, translateCategory } = useI18n();
   const draftKey = `gaw:booking-draft:${account?.email ?? "anon"}:${worker.id}`;
 
@@ -284,6 +285,16 @@ function BookingFlow({ worker }: { worker: Worker }) {
               </div>
             ))}
           </dl>
+          {draft.budgetMode === "budget" && Number(draft.budget) >= 100 && (
+            <SettlementPreviewCard
+              amountPhp={Number(draft.budget)}
+              estimatedHours={Number(draft.budget) >= 254 ? 4 : Number(draft.budget) >= 127 ? 2 : 1}
+              employerTier={plans.includes("employer") ? "PRO" : "FREE"}
+              employeeTier="FREE"
+              perspective="employer"
+              className="mt-4"
+            />
+          )}
           <Button size="lg" className="mt-5 w-full" onClick={confirm} disabled={busy}>
             {busy && <Loader2 className="animate-spin" />}
             {busy
